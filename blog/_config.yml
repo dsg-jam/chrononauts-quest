@@ -1,0 +1,10 @@
+title: Chrononauts Quest Development Blog
+description: >-
+  Documenting the development process for Chrononauts.
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "" # the base hostname & protocol for your site, e.g. http://example.com
+
+# Build settings
+theme: minima
+plugins:
+  - jekyll-feed

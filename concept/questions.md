@@ -1,7 +1,7 @@
 # Questions
 
 This document is for tracking questions that might be raised by players.
-
+Ideally, all of them should be answered over the course of the game.
 
 ## How do the players travel through time?
 

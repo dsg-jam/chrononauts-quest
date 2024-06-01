@@ -1,0 +1,5 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+	"name": "Jekyll",
+	"image": "mcr.microsoft.com/devcontainers/jekyll:2-bookworm"
+}
