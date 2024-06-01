@@ -1,0 +1,24 @@
+---
+---
+
+@import "minima";
+
+.figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    img {
+        max-height: 30em;
+    }
+
+    figcaption {
+        text-align: center;
+    }
+}
+
+.figure-row {
+    display: flex;
+    gap: 2em;
+    align-items: baseline;
+}
