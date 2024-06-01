@@ -15,3 +15,4 @@ Thiemo and Lara must travel to 1920, find the scientist, solve the mystery of th
 - When folded correctly, the paper gives another QR code that will yield the required password ("paradoxium") to enter the website.
 
 QR Codes generated with: <https://www.nayuki.io/page/qr-code-generator-library> (error correction set to high)
+`
