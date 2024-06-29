@@ -1,0 +1,3 @@
+[submodule "hw/chrononauts-board/PCBLib"]
+	path = hw/chrononauts-board/PCBLib
+	url = https://github.com/mineiwik/PCBLib.git
