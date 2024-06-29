@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 8)
+  (lib (name "ChrononautsLib")(type "KiCad")(uri "${KIPRJMOD}/PCBLib/footprints/CoralPCBLib.pretty")(options "")(descr ""))
+)
