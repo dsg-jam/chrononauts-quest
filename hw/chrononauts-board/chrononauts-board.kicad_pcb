@@ -456,7 +456,7 @@
 			(pintype "passive+no_connect")
 			(uuid "d8ee9c8f-4837-48a5-ba98-6ed35abf771c")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/NX3225GA16000MSTDCRG1.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/NX3225GA16000MSTDCRG1.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -645,7 +645,7 @@
 			(pintype "passive")
 			(uuid "ef982875-641d-4cfc-99b6-2167bcd152aa")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -834,7 +834,7 @@
 			(pintype "passive")
 			(uuid "32979845-c5ed-46c5-869a-2642c513a09a")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -1023,7 +1023,7 @@
 			(pintype "passive")
 			(uuid "f4945ccf-f677-41aa-97d1-fd323c314731")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -2454,7 +2454,7 @@
 			(pintype "power_in")
 			(uuid "0b21a987-e5c9-4328-a258-cf778801c769")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/CC1101RGP.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/CC1101RGP.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -2643,7 +2643,7 @@
 			(pintype "passive")
 			(uuid "593f5864-bec6-4b71-a17e-36279399a811")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/R_Bourns_CR_0603.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/R_Bourns_CR_0603.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -2832,7 +2832,7 @@
 			(pintype "passive")
 			(uuid "89bbf41e-f375-4ec9-92a6-f7ea64cf3f05")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -3021,7 +3021,7 @@
 			(pintype "passive")
 			(uuid "f1e41ee3-dc97-49e5-bcf8-0841b34dd40a")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -3210,7 +3210,7 @@
 			(pintype "passive")
 			(uuid "1b7b3d82-d9e3-43a2-848d-8e31a4cef870")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -3399,7 +3399,7 @@
 			(pintype "passive")
 			(uuid "293b2a81-c3a6-4507-a90f-0b1743286aaa")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/R_Vishay_CRCW_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/R_Vishay_CRCW_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -3588,7 +3588,7 @@
 			(pintype "passive")
 			(uuid "4ef7bcef-0a86-42a9-95af-d104ffd264b1")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/R_Vishay_CRCW_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/R_Vishay_CRCW_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -3777,7 +3777,7 @@
 			(pintype "passive")
 			(uuid "5c923eaf-3444-410b-af5f-af5778776f34")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0603.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0603.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -3966,7 +3966,7 @@
 			(pintype "passive")
 			(uuid "bdda7ce2-271c-4f9d-bf00-6c82721d7b3b")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/R_Bourns_CR_0603.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/R_Bourns_CR_0603.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -4155,7 +4155,7 @@
 			(pintype "passive")
 			(uuid "7f7778d0-675c-47a0-88b7-97a9fdf79b22")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -4356,7 +4356,7 @@
 			(pintype "passive")
 			(uuid "6ffccece-f535-4773-bc63-f35b091fb950")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/L_Murata_LQG_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/L_Murata_LQG_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -4545,7 +4545,7 @@
 			(pintype "passive")
 			(uuid "cdead092-18d7-4382-b18a-08e417f13b8b")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -4734,7 +4734,7 @@
 			(pintype "passive")
 			(uuid "b969f90f-8adc-4f60-8b02-5c2da245a18a")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/SOD3716X135N.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/SOD3716X135N.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -4923,7 +4923,7 @@
 			(pintype "passive")
 			(uuid "765a088a-b0fa-42bb-b8a7-5af74b81afd5")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/R_Vishay_CRCW_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/R_Vishay_CRCW_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -5112,7 +5112,7 @@
 			(pintype "passive")
 			(uuid "9325da45-1c74-4aa8-8edc-ed72887b7263")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -5301,7 +5301,7 @@
 			(pintype "passive")
 			(uuid "5952f9e8-288f-4f0f-a537-fcf6ea6cec5d")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -5522,7 +5522,7 @@
 			(pintype "passive")
 			(uuid "1701fd33-8592-4695-af9a-f7e149771703")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/SODFL1006X40N.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/SODFL1006X40N.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -5743,7 +5743,7 @@
 			(pintype "passive")
 			(uuid "c5f44532-bf0b-4724-ba61-df7b33c18f6c")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/SODFL1006X40N.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/SODFL1006X40N.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -5932,7 +5932,7 @@
 			(pintype "passive")
 			(uuid "0dbe45a8-4fc5-454a-a1a2-af9d6ac6e73c")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -6121,7 +6121,7 @@
 			(pintype "passive")
 			(uuid "db0a1e6b-1cab-42a6-a0ec-5e93c274dabf")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/R_KOA_RK_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/R_KOA_RK_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -6636,7 +6636,7 @@
 			(pintype "unspecified")
 			(uuid "e54de7c7-3b76-4a7e-86d7-390cc8846071")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/73251-1290.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/73251-1290.stp"
 			(offset
 				(xyz 0 0 -1.1)
 			)
@@ -6825,7 +6825,7 @@
 			(pintype "passive")
 			(uuid "e67ae1ab-4220-4155-aa2c-7d478cd9f0c0")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/R_Vishay_CRCW_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/R_Vishay_CRCW_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -7046,7 +7046,7 @@
 			(pintype "passive")
 			(uuid "45922360-cb33-4e3c-b212-f30e31c9edc4")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/SODFL1006X40N.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/SODFL1006X40N.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -7247,7 +7247,7 @@
 			(pintype "passive")
 			(uuid "10a5d8dd-08c6-4d47-a10c-fe3d8e5441f5")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/L_Murata_LQG_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/L_Murata_LQG_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -7436,7 +7436,7 @@
 			(pintype "passive")
 			(uuid "3a0bc2d7-6785-420a-9278-2e6533e3be3b")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -7625,7 +7625,7 @@
 			(pintype "passive")
 			(uuid "fb1f0aa9-05db-46d6-b094-664d72cf6f99")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -7814,7 +7814,7 @@
 			(pintype "passive")
 			(uuid "b7c7c560-497f-4e96-adb5-84b013f5af97")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -8003,7 +8003,7 @@
 			(pintype "passive")
 			(uuid "f75e3457-e998-4473-849d-aa183d902584")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -8192,7 +8192,7 @@
 			(pintype "passive")
 			(uuid "20de7ef3-83fd-43e8-90a4-0a2fa2962ad6")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/R_Vishay_CRCW_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/R_Vishay_CRCW_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -8625,7 +8625,7 @@
 			(pintype "power_in")
 			(uuid "03ed95fb-91cd-4529-9468-5a5a83a9a4cb")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/USB4105-GF-A.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/USB4105-GF-A.stp"
 			(offset
 				(xyz 0 -2.5 0)
 			)
@@ -9130,7 +9130,7 @@
 			(pintype "passive")
 			(uuid "469efc49-d8e9-4b83-91a3-74539106b2b0")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/ESP32-C3-WROOM-02-N4.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/ESP32-C3-WROOM-02-N4.stp"
 			(offset
 				(xyz -0.9 3.3 1.6)
 			)
@@ -9319,7 +9319,7 @@
 			(pintype "passive")
 			(uuid "db379859-47a9-46fe-8360-bcd0625326ce")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -9508,7 +9508,7 @@
 			(pintype "passive")
 			(uuid "9320bd3f-2bc9-4e20-9b32-b4c30cc86854")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -9697,7 +9697,7 @@
 			(pintype "passive")
 			(uuid "9fb5f2d9-90c2-4ff6-af31-b113f2703e75")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -9886,7 +9886,7 @@
 			(pintype "passive")
 			(uuid "22635fce-2c1e-4b5b-9fa9-857cde0dc7ad")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -10075,7 +10075,7 @@
 			(pintype "passive")
 			(uuid "01e0a03b-3acd-4110-8256-fe7f9c1bfe43")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -10276,7 +10276,7 @@
 			(pintype "passive")
 			(uuid "c572cee6-f24a-4f5f-a059-11451bd2dfb3")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/L_Murata_LQG_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/L_Murata_LQG_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -10477,7 +10477,7 @@
 			(pintype "passive")
 			(uuid "bdd8d081-cd4b-46f0-b5a5-e1cb69613b87")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/L_Murata_LQG_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/L_Murata_LQG_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -10730,7 +10730,7 @@
 			(pintype "passive")
 			(uuid "328e59d8-6cc5-4859-b163-6b5934d04972")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/ASPI-0418FS-2R2M-T3.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/ASPI-0418FS-2R2M-T3.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -11067,7 +11067,7 @@
 			(pintype "passive")
 			(uuid "05d5afca-fe85-4b04-bca6-3ab240667e8d")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/TLV62568DBVR.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/TLV62568DBVR.stp"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -11256,7 +11256,7 @@
 			(pintype "passive")
 			(uuid "bfbc6150-21bc-45e2-b40f-476111ac9c2c")
 		)
-		(model "${KIPRJMOD}/ChrononautsLib/3d/Cap_Murata_GRM_0402.stp"
+		(model "${KIPRJMOD}/PCBLib/3d/Cap_Murata_GRM_0402.stp"
 			(offset
 				(xyz 0 0 0)
 			)
