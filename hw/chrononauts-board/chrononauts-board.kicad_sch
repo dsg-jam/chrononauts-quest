@@ -1017,7 +1017,7 @@
 				)
 			)
 		)
-		(symbol "ChrononautsLib:CC1101RGP"
+		(symbol "PCBLib:CC1101RGP"
 			(pin_names
 				(offset 0.254)
 			)
@@ -1040,7 +1040,7 @@
 					)
 				)
 			)
-			(property "Footprint" "ChrononautsLib:CC1101RGP"
+			(property "Footprint" "PCBLib:CC1101RGP"
 				(at 1.27 38.1 0)
 				(effects
 					(font
@@ -1479,7 +1479,7 @@
 				)
 			)
 		)
-		(symbol "ChrononautsLib:ESP32-C3-WROOM-02-N4"
+		(symbol "PCBLib:ESP32-C3-WROOM-02-N4"
 			(pin_names
 				(offset 0.762)
 			)
@@ -1504,7 +1504,7 @@
 					(justify left)
 				)
 			)
-			(property "Footprint" "ChrononautsLib:ESP32C3WROOM02N4"
+			(property "Footprint" "PCBLib:ESP32C3WROOM02N4"
 				(at -13.97 30.48 0)
 				(effects
 					(font
@@ -2067,7 +2067,7 @@
 				)
 			)
 		)
-		(symbol "ChrononautsLib:NX3225GA-26.000MHZ-EXS00A-CG01972"
+		(symbol "PCBLib:NX3225GA-26.000MHZ-EXS00A-CG01972"
 			(pin_names
 				(offset 0.762)
 			)
@@ -2092,7 +2092,7 @@
 					(justify left)
 				)
 			)
-			(property "Footprint" "ChrononautsLib:NX3225GA16000MSTDCRG1"
+			(property "Footprint" "PCBLib:NX3225GA16000MSTDCRG1"
 				(at 0 22.86 0)
 				(effects
 					(font
@@ -2240,7 +2240,7 @@
 				)
 			)
 		)
-		(symbol "ChrononautsLib:SD-73251-129"
+		(symbol "PCBLib:SD-73251-129"
 			(pin_names
 				(offset 0)
 			)
@@ -2265,7 +2265,7 @@
 					(justify left)
 				)
 			)
-			(property "Footprint" "ChrononautsLib:Molex-SD-73251-129"
+			(property "Footprint" "PCBLib:Molex-SD-73251-129"
 				(at 0 22.86 0)
 				(effects
 					(font
@@ -2583,7 +2583,7 @@
 				)
 			)
 		)
-		(symbol "ChrononautsLib:TLV62568DBVR"
+		(symbol "PCBLib:TLV62568DBVR"
 			(pin_names
 				(offset 0.762)
 			)
@@ -2608,7 +2608,7 @@
 					(justify left)
 				)
 			)
-			(property "Footprint" "ChrononautsLib:TLV62568DBVR"
+			(property "Footprint" "PCBLib:TLV62568DBVR"
 				(at 0 20.32 0)
 				(effects
 					(font
@@ -2774,7 +2774,7 @@
 				)
 			)
 		)
-		(symbol "ChrononautsLib:USB4105-GF-A"
+		(symbol "PCBLib:USB4105-GF-A"
 			(pin_names
 				(offset 1.016)
 			)
@@ -2799,7 +2799,7 @@
 					(justify left bottom)
 				)
 			)
-			(property "Footprint" "ChrononautsLib:GCT_USB4105-GF-A"
+			(property "Footprint" "PCBLib:GCT_USB4105-GF-A"
 				(at 13.97 31.75 0)
 				(effects
 					(font
@@ -3141,9 +3141,9 @@
 		)
 		(symbol "power:+3V3"
 			(power)
+			(pin_numbers hide)
 			(pin_names
-				(offset 0)
-			)
+				(offset 0) hide)
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -3241,8 +3241,8 @@
 			(symbol "+3V3_1_1"
 				(pin power_in line
 					(at 0 0 90)
-					(length 0) hide
-					(name "+3V3"
+					(length 0)
+					(name "~"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3261,9 +3261,9 @@
 		)
 		(symbol "power:+5V"
 			(power)
+			(pin_numbers hide)
 			(pin_names
-				(offset 0)
-			)
+				(offset 0) hide)
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -3361,8 +3361,8 @@
 			(symbol "+5V_1_1"
 				(pin power_in line
 					(at 0 0 90)
-					(length 0) hide
-					(name "+5V"
+					(length 0)
+					(name "~"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3381,9 +3381,9 @@
 		)
 		(symbol "power:Earth"
 			(power)
+			(pin_numbers hide)
 			(pin_names
-				(offset 0)
-			)
+				(offset 0) hide)
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -3402,7 +3402,6 @@
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "Footprint" ""
@@ -3494,8 +3493,8 @@
 			(symbol "Earth_1_1"
 				(pin power_in line
 					(at 0 0 270)
-					(length 0) hide
-					(name "Earth"
+					(length 0)
+					(name "~"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -5954,7 +5953,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 196.85 53.34 0)
 			(effects
 				(font
@@ -6021,7 +6020,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 27.94 92.71 0)
 			(effects
 				(font
@@ -6088,7 +6087,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 127 87.63 0)
 			(effects
 				(font
@@ -6110,7 +6109,7 @@
 		)
 	)
 	(symbol
-		(lib_id "ChrononautsLib:SD-73251-129")
+		(lib_id "PCBLib:SD-73251-129")
 		(at 267.97 63.5 180)
 		(unit 1)
 		(exclude_from_sim no)
@@ -6136,7 +6135,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Molex-SD-73251-129"
+		(property "Footprint" "PCBLib:Molex-SD-73251-129"
 			(at 267.97 86.36 0)
 			(effects
 				(font
@@ -6156,7 +6155,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "SMA Connector Jack, Female Socket 50 Ohm Board Edge, End Launch; Panel Mount Solder"
 			(at 267.97 63.5 0)
 			(effects
 				(font
@@ -6425,7 +6424,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 143.51 59.69 0)
 			(effects
 				(font
@@ -6473,7 +6472,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 220.98 73.9648 0)
 			(effects
 				(font
@@ -6491,7 +6490,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 217.17 74.93 0)
 			(effects
 				(font
@@ -6540,7 +6539,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:R_Vishay_CRCW_0402"
+		(property "Footprint" "PCBLib:R_Vishay_CRCW_0402"
 			(at 26.67 147.32 0)
 			(effects
 				(font
@@ -6558,7 +6557,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small symbol"
 			(at 26.67 147.32 0)
 			(effects
 				(font
@@ -6609,7 +6608,7 @@
 				(justify left top)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:R_Bourns_CR_0603"
+		(property "Footprint" "PCBLib:R_Bourns_CR_0603"
 			(at 80.01 110.49 0)
 			(effects
 				(font
@@ -6627,7 +6626,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small symbol"
 			(at 80.01 110.49 0)
 			(effects
 				(font
@@ -6697,7 +6696,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 46.99 113.03 0)
 			(effects
 				(font
@@ -6764,7 +6763,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 248.92 81.28 0)
 			(effects
 				(font
@@ -6831,7 +6830,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 86.36 179.07 0)
 			(effects
 				(font
@@ -6879,7 +6878,7 @@
 				(justify left top)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 78.4352 97.79 0)
 			(effects
 				(font
@@ -6897,7 +6896,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 77.47 93.98 0)
 			(effects
 				(font
@@ -6948,7 +6947,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 197.8152 86.36 0)
 			(effects
 				(font
@@ -6966,7 +6965,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 196.85 82.55 0)
 			(effects
 				(font
@@ -7036,7 +7035,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 137.16 87.63 0)
 			(effects
 				(font
@@ -7084,7 +7083,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:R_Vishay_CRCW_0402"
+		(property "Footprint" "PCBLib:R_Vishay_CRCW_0402"
 			(at 82.55 41.91 0)
 			(effects
 				(font
@@ -7102,7 +7101,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small symbol"
 			(at 82.55 41.91 0)
 			(effects
 				(font
@@ -7153,7 +7152,7 @@
 				(justify left top)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 202.8952 60.96 0)
 			(effects
 				(font
@@ -7171,7 +7170,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 201.93 57.15 0)
 			(effects
 				(font
@@ -7241,7 +7240,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 238.76 81.28 0)
 			(effects
 				(font
@@ -7287,7 +7286,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:L_Murata_LQG_0402"
+		(property "Footprint" "PCBLib:L_Murata_LQG_0402"
 			(at 243.84 73.66 0)
 			(effects
 				(font
@@ -7305,7 +7304,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Inductor"
 			(at 243.84 73.66 0)
 			(effects
 				(font
@@ -7375,7 +7374,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 38.1 137.16 0)
 			(effects
 				(font
@@ -7421,7 +7420,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:L_Murata_LQG_0402"
+		(property "Footprint" "PCBLib:L_Murata_LQG_0402"
 			(at 223.52 71.12 0)
 			(effects
 				(font
@@ -7439,7 +7438,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Inductor"
 			(at 223.52 71.12 0)
 			(effects
 				(font
@@ -7490,7 +7489,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 177.4952 102.87 0)
 			(effects
 				(font
@@ -7508,7 +7507,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 176.53 99.06 0)
 			(effects
 				(font
@@ -7578,7 +7577,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 210.82 93.98 0)
 			(effects
 				(font
@@ -7626,7 +7625,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 195.2752 125.73 0)
 			(effects
 				(font
@@ -7644,7 +7643,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 194.31 121.92 0)
 			(effects
 				(font
@@ -7693,7 +7692,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:L_Murata_LQG_0402"
+		(property "Footprint" "PCBLib:L_Murata_LQG_0402"
 			(at 233.68 73.66 0)
 			(effects
 				(font
@@ -7711,7 +7710,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Inductor"
 			(at 233.68 73.66 0)
 			(effects
 				(font
@@ -7762,7 +7761,7 @@
 				(justify right bottom)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 247.9548 73.66 0)
 			(effects
 				(font
@@ -7780,7 +7779,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 248.92 77.47 0)
 			(effects
 				(font
@@ -7850,7 +7849,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 176.53 102.87 0)
 			(effects
 				(font
@@ -7898,7 +7897,7 @@
 				(justify left top)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 70.8152 97.79 0)
 			(effects
 				(font
@@ -7916,7 +7915,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 69.85 93.98 0)
 			(effects
 				(font
@@ -7967,7 +7966,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 172.4152 41.91 0)
 			(effects
 				(font
@@ -7985,7 +7984,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 171.45 38.1 0)
 			(effects
 				(font
@@ -8010,7 +8009,7 @@
 		)
 	)
 	(symbol
-		(lib_id "ChrononautsLib:CC1101RGP")
+		(lib_id "PCBLib:CC1101RGP")
 		(at 171.45 69.85 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -8034,7 +8033,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:CC1101RGP"
+		(property "Footprint" "PCBLib:CC1101RGP"
 			(at 195.58 41.91 0)
 			(effects
 				(font
@@ -8054,7 +8053,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "TI Low-Power Sub-1 GHz RF Transceiver"
 			(at 171.45 69.85 0)
 			(effects
 				(font
@@ -8160,7 +8159,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:R_Vishay_CRCW_0402"
+		(property "Footprint" "PCBLib:R_Vishay_CRCW_0402"
 			(at 26.67 160.02 0)
 			(effects
 				(font
@@ -8178,7 +8177,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small symbol"
 			(at 26.67 160.02 0)
 			(effects
 				(font
@@ -8229,7 +8228,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 257.81 72.6948 0)
 			(effects
 				(font
@@ -8247,7 +8246,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 254 73.66 0)
 			(effects
 				(font
@@ -8317,7 +8316,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 82.55 44.45 0)
 			(effects
 				(font
@@ -8384,7 +8383,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 194.31 125.73 0)
 			(effects
 				(font
@@ -8432,7 +8431,7 @@
 				(justify right bottom)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0603"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0603"
 			(at 26.9748 92.71 0)
 			(effects
 				(font
@@ -8450,7 +8449,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 27.94 96.52 0)
 			(effects
 				(font
@@ -8519,7 +8518,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
 			(at 21.59 92.71 0)
 			(effects
 				(font
@@ -8586,7 +8585,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 80.01 113.03 0)
 			(effects
 				(font
@@ -8634,7 +8633,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 211.7852 71.12 0)
 			(effects
 				(font
@@ -8652,7 +8651,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 210.82 67.31 0)
 			(effects
 				(font
@@ -8677,7 +8676,7 @@
 		)
 	)
 	(symbol
-		(lib_id "ChrononautsLib:NX3225GA-26.000MHZ-EXS00A-CG01972")
+		(lib_id "PCBLib:NX3225GA-26.000MHZ-EXS00A-CG01972")
 		(at 177.8 114.3 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -8701,7 +8700,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:NX3225GA16000MSTDCRG1"
+		(property "Footprint" "PCBLib:NX3225GA16000MSTDCRG1"
 			(at 191.77 110.49 0)
 			(effects
 				(font
@@ -8721,7 +8720,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Crystals CRYSTAL 26MHZ 10PF SMD"
+		(property "Description" "CRYSTAL 26MHZ 10PF SMD"
 			(at 191.77 115.57 0)
 			(effects
 				(font
@@ -8829,7 +8828,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:R_Vishay_CRCW_0402"
+		(property "Footprint" "PCBLib:R_Vishay_CRCW_0402"
 			(at 87.63 142.24 0)
 			(effects
 				(font
@@ -8847,7 +8846,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small symbol"
 			(at 87.63 142.24 0)
 			(effects
 				(font
@@ -8917,7 +8916,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 88.9 44.45 0)
 			(effects
 				(font
@@ -8984,7 +8983,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 171.45 34.29 0)
 			(effects
 				(font
@@ -9006,7 +9005,7 @@
 		)
 	)
 	(symbol
-		(lib_id "ChrononautsLib:ESP32-C3-WROOM-02-N4")
+		(lib_id "PCBLib:ESP32-C3-WROOM-02-N4")
 		(at 63.5 160.02 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -9030,7 +9029,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:ESP32C3WROOM02N4"
+		(property "Footprint" "PCBLib:ESP32C3WROOM02N4"
 			(at 92.71 157.48 0)
 			(effects
 				(font
@@ -9227,7 +9226,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 30.1752 144.78 0)
 			(effects
 				(font
@@ -9245,7 +9244,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 29.21 140.97 0)
 			(effects
 				(font
@@ -9314,7 +9313,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
 			(at 80.01 25.4 0)
 			(effects
 				(font
@@ -9362,7 +9361,7 @@
 				(justify left top)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:R_Bourns_CR_0603"
+		(property "Footprint" "PCBLib:R_Bourns_CR_0603"
 			(at 80.01 101.6 0)
 			(effects
 				(font
@@ -9380,7 +9379,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small symbol"
 			(at 80.01 101.6 0)
 			(effects
 				(font
@@ -9450,7 +9449,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 181.61 48.26 0)
 			(effects
 				(font
@@ -9517,7 +9516,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 31.75 156.21 0)
 			(effects
 				(font
@@ -9584,7 +9583,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 77.47 90.17 0)
 			(effects
 				(font
@@ -9632,7 +9631,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 209.8548 86.36 0)
 			(effects
 				(font
@@ -9650,7 +9649,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 210.82 90.17 0)
 			(effects
 				(font
@@ -9699,7 +9698,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:SODFL1006X40N"
+		(property "Footprint" "PCBLib:SODFL1006X40N"
 			(at 59.69 58.42 0)
 			(effects
 				(font
@@ -9717,7 +9716,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Bidirectional transient-voltage-suppression diode"
 			(at 59.69 58.42 0)
 			(effects
 				(font
@@ -9787,7 +9786,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 59.69 66.04 0)
 			(effects
 				(font
@@ -9809,7 +9808,7 @@
 		)
 	)
 	(symbol
-		(lib_id "ChrononautsLib:USB4105-GF-A")
+		(lib_id "PCBLib:USB4105-GF-A")
 		(at 40.64 45.72 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -9835,7 +9834,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:GCT_USB4105-GF-A"
+		(property "Footprint" "PCBLib:GCT_USB4105-GF-A"
 			(at 40.64 45.72 0)
 			(effects
 				(font
@@ -9854,7 +9853,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "USB Type C socket"
 			(at 40.64 45.72 0)
 			(effects
 				(font
@@ -10006,7 +10005,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 80.01 31.75 0)
 			(effects
 				(font
@@ -10073,7 +10072,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 176.53 34.29 0)
 			(effects
 				(font
@@ -10095,7 +10094,7 @@
 		)
 	)
 	(symbol
-		(lib_id "ChrononautsLib:TLV62568DBVR")
+		(lib_id "PCBLib:TLV62568DBVR")
 		(at 46.99 102.87 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -10119,7 +10118,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:TLV62568DBVR"
+		(property "Footprint" "PCBLib:TLV62568DBVR"
 			(at 68.58 100.33 0)
 			(effects
 				(font
@@ -10269,7 +10268,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 196.85 86.36 0)
 			(effects
 				(font
@@ -10315,7 +10314,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:SODFL1006X40N"
+		(property "Footprint" "PCBLib:SODFL1006X40N"
 			(at 67.31 58.42 0)
 			(effects
 				(font
@@ -10333,7 +10332,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Bidirectional transient-voltage-suppression diode"
 			(at 67.31 58.42 0)
 			(effects
 				(font
@@ -10384,7 +10383,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:R_Vishay_CRCW_0402"
+		(property "Footprint" "PCBLib:R_Vishay_CRCW_0402"
 			(at 88.9 41.91 0)
 			(effects
 				(font
@@ -10402,7 +10401,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small symbol"
 			(at 88.9 41.91 0)
 			(effects
 				(font
@@ -10451,7 +10450,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:SOD3716X135N"
+		(property "Footprint" "PCBLib:SOD3716X135N"
 			(at 62.23 25.4 0)
 			(effects
 				(font
@@ -10469,7 +10468,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Schottky diode"
 			(at 62.23 25.4 0)
 			(effects
 				(font
@@ -10539,7 +10538,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 201.93 53.34 0)
 			(effects
 				(font
@@ -10587,7 +10586,7 @@
 				(justify right top)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 197.8152 60.96 0)
 			(effects
 				(font
@@ -10605,7 +10604,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 196.85 57.15 0)
 			(effects
 				(font
@@ -10656,7 +10655,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 126.0348 80.01 0)
 			(effects
 				(font
@@ -10674,7 +10673,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 127 83.82 0)
 			(effects
 				(font
@@ -10743,7 +10742,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 88.9 90.17 0)
 			(effects
 				(font
@@ -10791,7 +10790,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 138.1252 87.63 0)
 			(effects
 				(font
@@ -10809,7 +10808,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 137.16 83.82 0)
 			(effects
 				(font
@@ -10879,7 +10878,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 22.86 52.07 0)
 			(effects
 				(font
@@ -10946,7 +10945,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 166.37 48.26 0)
 			(effects
 				(font
@@ -10994,7 +10993,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 39.0652 144.78 0)
 			(effects
 				(font
@@ -11012,7 +11011,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 38.1 140.97 0)
 			(effects
 				(font
@@ -11082,7 +11081,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 29.21 137.16 0)
 			(effects
 				(font
@@ -11149,7 +11148,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 69.85 90.17 0)
 			(effects
 				(font
@@ -11197,7 +11196,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 32.7152 156.21 0)
 			(effects
 				(font
@@ -11215,7 +11214,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 31.75 152.4 0)
 			(effects
 				(font
@@ -11264,7 +11263,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:L_Murata_LQG_0402"
+		(property "Footprint" "PCBLib:L_Murata_LQG_0402"
 			(at 210.82 80.01 0)
 			(effects
 				(font
@@ -11282,7 +11281,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Inductor"
 			(at 210.82 80.01 0)
 			(effects
 				(font
@@ -11352,7 +11351,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 67.31 66.04 0)
 			(effects
 				(font
@@ -11418,7 +11417,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 87.63 138.43 0)
 			(effects
 				(font
@@ -11466,7 +11465,7 @@
 				(justify right bottom)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 237.7948 73.66 0)
 			(effects
 				(font
@@ -11484,7 +11483,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 238.76 77.47 0)
 			(effects
 				(font
@@ -11535,7 +11534,7 @@
 				(justify top)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:ASPI0418FS"
+		(property "Footprint" "PCBLib:ASPI0418FS"
 			(at 63.5 97.79 0)
 			(effects
 				(font
@@ -11553,7 +11552,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Inductor with ferrite core"
 			(at 63.5 97.79 0)
 			(effects
 				(font
@@ -11623,7 +11622,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 160.02 125.73 0)
 			(effects
 				(font
@@ -11689,7 +11688,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 21.59 138.43 0)
 			(effects
 				(font
@@ -11735,7 +11734,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:SODFL1006X40N"
+		(property "Footprint" "PCBLib:SODFL1006X40N"
 			(at 62.23 31.75 0)
 			(effects
 				(font
@@ -11753,7 +11752,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Bidirectional transient-voltage-suppression diode"
 			(at 62.23 31.75 0)
 			(effects
 				(font
@@ -11822,7 +11821,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 139.7 39.37 0)
 			(effects
 				(font
@@ -11870,7 +11869,7 @@
 				(justify right bottom)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 87.9348 97.79 0)
 			(effects
 				(font
@@ -11888,7 +11887,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 88.9 101.6 0)
 			(effects
 				(font
@@ -11958,7 +11957,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 43.18 67.31 0)
 			(effects
 				(font
@@ -12025,7 +12024,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 257.81 49.53 0)
 			(effects
 				(font
@@ -12073,7 +12072,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:Cap_Murata_GRM_0402"
+		(property "Footprint" "PCBLib:Cap_Murata_GRM_0402"
 			(at 160.9852 125.73 0)
 			(effects
 				(font
@@ -12091,7 +12090,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 160.02 121.92 0)
 			(effects
 				(font
@@ -12143,7 +12142,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "ChrononautsLib:R_KOA_RK_0402"
+		(property "Footprint" "PCBLib:R_KOA_RK_0402"
 			(at 176.53 38.1 0)
 			(effects
 				(font
@@ -12161,7 +12160,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small symbol"
 			(at 176.53 38.1 0)
 			(effects
 				(font
@@ -12231,7 +12230,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
 			(at 210.82 63.5 0)
 			(effects
 				(font
