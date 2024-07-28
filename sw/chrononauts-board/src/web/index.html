@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Chrononauts Portal</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <section class="py-8">
+    <div class="container px-4 mx-auto">
+      <div class="p-4 mb-6 bg-neutral-900 shadow rounded overflow-x-auto">
+        <h1 class="text-xl font-bold leading-7 text-white text-center">Chrononauts Captive Portal</h1>
+        <form method="POST">
+          <div class="space-y-12">
+            <div class="border-b border-white-200/10 pb-12">
+              <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+                <div class="sm:col-span-5">
+                  <label for="ssid" class="block text-medium font-medium leading-6 text-white">Select SSID</label>
+                  <div class="mt-2">
+                    <select
+                      class="chrononauts-dropdown-symbol w-full appearance-none row-start-1 col-start-1 rounded-lg px-2 py-3 pr-7 text-neutral-200 bg-green-600"
+                      name="ssid"
+                      id="ssid"
+                      value="{ssid}"
+                    >
+                      <option id="ssid-sel-default" disabled hidden selected value="">-- Select SSID --</option>
+                      {available_ssids}
+                    </select>
+                  </div>
+                </div>
+                <div class="sm:col-span-1">
+                  <div class="sm:mt-8">
+                    <button
+                      class="inline-block w-full px-6 py-3 font-medium text-neutral-200 bg-indigo-600 hover:bg-indigo-700 rounded transition duration-200 text-center justify-center items-center"
+                      type="button"
+                      onclick="request_scan()"
+                    >
+                      <svg class="h-6 w-6 text-white block m-auto"  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -5v5h5" />  <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 5v-5h-5" /></svg>  
+                    </button>
+                  </div>
+                </div>
+                <div class="col-span-full">
+                  <label for="password" class="block text-medium font-medium leading-6 text-white">Password (WPA2)</label>
+                  <div class="mt-2">
+                    <input
+                      class="inline-block w-full px-3 py-3 font-medium bg-gray-200 rounded"
+                      type="password"
+                      id="password"
+                      name="wpa2"
+                      value="{wpa2}"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-6 flex items-center justify-end gap-x-6">
+            <button type="submit" class="inline-block w-full px-6 py-3 font-medium text-neutral-200 bg-indigo-600 hover:bg-indigo-700 rounded transition duration-200">Save</button>
+          </div>
+        </form>
+      </div>      
+    </div>
+  </main>
+  <script src="/script.js"></script>
+</body>
+</html>
