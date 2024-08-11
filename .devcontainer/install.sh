@@ -19,7 +19,7 @@ install_rust() {
 
     # install rustup with nightly toolchain and rust-src
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
-        -y --default-toolchain nightly --profile minimal --component rust-src,rustfmt
+        -y --default-toolchain nightly --profile minimal --component clippy,rust-src,rustfmt
 
     . "$HOME/.cargo/env"
 
