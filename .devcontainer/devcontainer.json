@@ -16,7 +16,13 @@
 				"rust-lang.rust-analyzer",
 				"sissel.shopify-liquid",
 				"streetsidesoftware.code-spell-checker",
-			]
+				"tamasfe.even-better-toml"
+			],
+			"settings": {
+				"rust-analyzer.linkedProjects": [
+					"sw/chrononauts-board/Cargo.toml"
+				]
+			}
 		}
 	}
 }
