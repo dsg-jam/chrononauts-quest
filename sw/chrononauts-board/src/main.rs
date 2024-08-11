@@ -2,41 +2,34 @@ use crate::captive::CaptivePortal;
 use dns::*;
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
-    hal::prelude::Peripherals,
+    hal::{
+        gpio::{InputMode, Pin, PinDriver, Pull},
+        prelude::Peripherals,
+        spi::{
+            config::{Config, DriverConfig},
+            Dma, SpiDeviceDriver, SpiDriver,
+        },
+    },
     http::server::Configuration,
-    ipv4::{self, Mask, RouterConfiguration, Subnet},
     log::EspLogger,
-    netif::{EspNetif, NetifConfiguration, NetifStack},
     nvs::EspDefaultNvsPartition,
     sys::{self, EspError},
-    wifi::{
-        self, AccessPointConfiguration, AccessPointInfo, ClientConfiguration, EspWifi, WifiDriver,
-    },
+    wifi::{AccessPointInfo, WifiDriver},
 };
 use std::{
-    net::Ipv4Addr,
     sync::{mpsc, Arc, Condvar, Mutex},
     thread::{self, sleep},
-    time::Duration,
+    time::{Duration, SystemTime},
 };
+use wifi::{WifiCreds, WifiRunner, IP_ADDRESS};
 
 mod captive;
 mod dns;
+mod radio;
 mod server;
+mod wifi;
 
-pub const IP_ADDRESS: Ipv4Addr = Ipv4Addr::new(10, 9, 1, 1);
-
-#[derive(Debug)]
-enum WifiRunner {
-    ChangeWifi(WifiCreds),
-    GetWifi,
-}
-
-#[derive(Debug)]
-struct WifiCreds {
-    ssid: String,
-    wpa2: String,
-}
+use cc1101::Cc1101;
 
 fn main() -> Result<(), EspError> {
     unsafe {
@@ -45,88 +38,59 @@ fn main() -> Result<(), EspError> {
     sys::link_patches();
     EspLogger::initialize_default();
 
+    // Determine chrononauts-board id
+    let chrononauts_id = env!("CHRONONAUTS_ID").parse::<isize>().unwrap();
+    if chrononauts_id == -1 {
+        log::info!("Chrononauts ID not set");
+    } else {
+        log::info!("Chrononauts ID: {}", chrononauts_id);
+    }
+
     let event_loop = EspSystemEventLoop::take()?;
     let peripherals = Peripherals::take()?;
     let (wifi_runner_tx, wifi_runner_rx) = mpsc::channel::<WifiRunner>();
 
     let wifi_update_cond = Arc::new((Mutex::new(false), Condvar::new()));
+    let pins = peripherals.pins;
 
     let wifi_nets_store = Arc::new(Mutex::new(Vec::<AccessPointInfo>::new()));
 
-    log::info!("Starting Wi-Fi...");
-    let wifi_driver = WifiDriver::new(
-        peripherals.modem,
-        event_loop.clone(),
-        EspDefaultNvsPartition::take().ok(),
+    let spi_driver = SpiDriver::new(
+        peripherals.spi2,
+        pins.gpio6,
+        pins.gpio7,
+        Some(pins.gpio2),
+        &DriverConfig::default().dma(Dma::Auto(4096)),
     )?;
-    let mut wifi = EspWifi::wrap_all(
-        wifi_driver,
-        EspNetif::new(NetifStack::Sta)?,
-        EspNetif::new_with_conf(&NetifConfiguration {
-            ip_configuration: ipv4::Configuration::Router(RouterConfiguration {
-                subnet: Subnet {
-                    gateway: IP_ADDRESS,
-                    mask: Mask(24),
-                },
-                dhcp_enabled: true,
-                dns: Some(IP_ADDRESS),
-                secondary_dns: Some(IP_ADDRESS),
-            }),
-            ..NetifConfiguration::wifi_default_router()
-        })?,
-    )
-    .expect("WiFi init failed");
 
-    wifi.set_configuration(&wifi::Configuration::Mixed(
-        ClientConfiguration {
-            ..Default::default()
-        },
-        AccessPointConfiguration {
-            ssid: env!("SSID").into(),
-            password: env!("SSID_PASSWORD").into(),
-            auth_method: wifi::AuthMethod::WPA2Personal,
-            ..Default::default()
-        },
-    ))?;
-    wifi.start()?;
-    let wifi_nets = wifi_nets_store.clone();
-    *wifi_nets.lock().unwrap() = scan_for_available_ssids(&mut wifi);
-    log::info!("Wi-Fi started");
+    let spi_device_driver =
+        SpiDeviceDriver::new(spi_driver, Some(pins.gpio10), &Config::default())?;
 
-    // Thread to handle Wi-Fi IPC messages
-    let wifi_nets = wifi_nets_store.clone();
-    let wifi_update_pair = Arc::clone(&wifi_update_cond);
-    thread::spawn(move || {
-        while let Ok(msg) = wifi_runner_rx.recv() {
-            log::info!("{msg:?}");
-            match msg {
-                WifiRunner::ChangeWifi(creds) => {
-                    wifi.set_configuration(&wifi::Configuration::Mixed(
-                        ClientConfiguration {
-                            ssid: creds.ssid.as_str().into(),
-                            password: creds.wpa2.as_str().into(),
-                            ..Default::default()
-                        },
-                        AccessPointConfiguration {
-                            ssid: env!("SSID").into(),
-                            password: env!("SSID_PASSWORD").into(),
-                            auth_method: wifi::AuthMethod::WPA2Personal,
-                            ..Default::default()
-                        },
-                    ))
+    let cc1101 = Cc1101::new(spi_device_driver).unwrap();
+    let mut radio = radio::ChrononautsRadio::new(cc1101);
+
+    let mut push_button = PinDriver::input(pins.gpio9)?;
+    push_button.set_pull(Pull::Up)?;
+
+    let mut led1 = PinDriver::output(pins.gpio3)?;
+    let mut led2 = PinDriver::output(pins.gpio1)?;
+
+    // Start the wifi driver
+    {
+        let wifi_driver = WifiDriver::new(
+            peripherals.modem,
+            event_loop.clone(),
+            EspDefaultNvsPartition::take().ok(),
+        )?;
+        let wifi_nets_store = wifi_nets_store.clone();
+        let wifi_update_cond = wifi_update_cond.clone();
+        thread::spawn(move || {
+            let mut chrononauts_wifi =
+                wifi::ChrononautsWifi::new(wifi_driver, wifi_nets_store.clone(), wifi_runner_rx)
                     .unwrap();
-                    wifi.connect().unwrap();
-                }
-                WifiRunner::GetWifi => {
-                    let (lock, cvar) = &*wifi_update_pair;
-                    let mut wifi_update = lock.lock().unwrap();
-                    *wifi_nets.lock().unwrap() = scan_for_available_ssids(&mut wifi);
-                    *wifi_update = true;
-                    cvar.notify_one();
-                }
-            }
-        }
-    });
+            chrononauts_wifi.start(wifi_update_cond.clone()).unwrap();
+        });
+    }
 
     log::info!("Starting DNS server...");
     let mut dns = SimpleDns::try_new(IP_ADDRESS).expect("DNS server init failed");
@@ -135,6 +99,39 @@ fn main() -> Result<(), EspError> {
         sleep(Duration::from_millis(50));
     });
     log::info!("DNS server started");
+
+    log::info!("Starting radio...");
+    thread::spawn(move || {
+        log::info!("Init radio...");
+        radio.init_radio();
+
+        let mut previous_level = false;
+        let mut button_state = false;
+        let mut last_change_time = SystemTime::now();
+
+        loop {
+            let (_payload, len) = radio.get_packet();
+
+            if len > 0 {
+                led1.toggle().unwrap();
+            }
+
+            if debounce_button(
+                &push_button,
+                &mut previous_level,
+                &mut button_state,
+                &mut last_change_time,
+            )
+            .unwrap()
+            {
+                log::info!("Button pressed");
+                let mut msg = "Button".as_bytes().to_vec();
+                radio.send_packet(&mut msg);
+                led2.toggle().unwrap();
+            };
+            sleep(Duration::from_millis(20));
+        }
+    });
 
     log::info!("Starting HTTP server...");
     let config = Configuration::default();
@@ -150,10 +147,37 @@ fn main() -> Result<(), EspError> {
     }
 }
 
-fn scan_for_available_ssids(wifi: &mut EspWifi) -> Vec<AccessPointInfo> {
-    let mut available_ssids = wifi.scan().unwrap();
-    available_ssids.sort_by(|a, b| a.ssid.cmp(&b.ssid));
-    available_ssids.dedup_by(|a, b| a.ssid == b.ssid);
-    available_ssids.sort_by(|a, b| a.signal_strength.cmp(&b.signal_strength).reverse());
-    available_ssids
+fn debounce_button<T, MODE>(
+    push_button: &PinDriver<T, MODE>,
+    previous_level: &mut bool,
+    button_state: &mut bool,
+    last_change_time: &mut SystemTime,
+) -> Result<bool, EspError>
+where
+    MODE: InputMode,
+    T: Pin,
+{
+    let current_level = push_button.is_high();
+    // If the switch changed, due to noise or pressing:
+    if current_level != *previous_level {
+        *previous_level = current_level;
+        *last_change_time = SystemTime::now();
+    }
+
+    if SystemTime::now()
+        .duration_since(*last_change_time)
+        .unwrap()
+        .as_millis()
+        > 50
+    {
+        // the reading is same for the last 50 ms
+        // if the button state has changed:
+        if current_level != *button_state {
+            *button_state = current_level;
+            if !(*button_state) {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
 }

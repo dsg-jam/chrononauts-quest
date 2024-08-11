@@ -8,9 +8,10 @@ target = "riscv32imc-esp-espidf"
 
 [env]
 MCU="esp32c3"
-ESP_IDF_VERSION = "v5.1.1"
+ESP_IDF_VERSION = "v5.2.2"
 SSID = "Chrononauts-Board"
 SSID_PASSWORD = "paradoxium2"
+CHRONONAUTS_ID = "-1"
 
 [unstable]
 build-std = ["std", "panic_abort"]

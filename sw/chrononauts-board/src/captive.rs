@@ -3,17 +3,17 @@ use esp_idf_svc::{
         server::{EspHttpConnection, EspHttpServer, Request},
         Method,
     },
-    sys::EspError,
+    io::EspIOError,
 };
 use std::net::Ipv4Addr;
 
 pub struct CaptivePortal;
 
 impl CaptivePortal {
-    pub fn attach(server: &mut EspHttpServer, addr: Ipv4Addr) -> Result<(), EspError> {
+    pub fn attach(server: &mut EspHttpServer, addr: Ipv4Addr) -> Result<(), EspIOError> {
         let redirect = move |request: Request<&'_ mut EspHttpConnection<'_>>| {
             request.into_response(302, None, &[("Location", &format!("http://{}", addr))])?;
-            Ok(())
+            Ok::<(), EspIOError>(())
         };
 
         server.fn_handler("/check_network_status.txt", Method::Get, redirect)?;

@@ -20,9 +20,10 @@ alloc = ["esp-idf-svc/alloc"]
 
 [dependencies]
 log = { version = "0.4", default-features = false }
-esp-idf-svc = { version = "0.47.3", default-features = false }
+esp-idf-svc = { version = "0.49.1", default-features = false }
 urlencoding = "2.1.3"
 heapless = "0.8.0"
+cc1101 = {git = "https://github.com/mineiwik/cc1101.git", branch = "main", features = ["std"]}
 
 [build-dependencies]
 embuild = { version = "0.32.0", features = ["espidf"] }

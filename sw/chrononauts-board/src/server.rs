@@ -1,9 +1,9 @@
 use esp_idf_svc::{
     http::{
-        server::{Configuration, EspHttpConnection, EspHttpServer, HandlerError, Request},
+        server::{Configuration, EspHttpConnection, EspHttpServer, Request},
         Method,
     },
-    io::Write,
+    io::{EspIOError, Write},
     sys::EspError,
     wifi::AccessPointInfo,
 };
@@ -54,14 +54,14 @@ pub fn setup_server(
     Ok(server)
 }
 
-fn handle_get_style(request: Request<&mut EspHttpConnection>) -> Result<(), HandlerError> {
+fn handle_get_style(request: Request<&mut EspHttpConnection>) -> Result<(), EspIOError> {
     request
         .into_response(200, None, &[("Content-Type", "text/css; charset=utf-8")])?
         .write_all(include_bytes!("web/style.css"))?;
     Ok(())
 }
 
-fn handle_get_script(request: Request<&mut EspHttpConnection>) -> Result<(), HandlerError> {
+fn handle_get_script(request: Request<&mut EspHttpConnection>) -> Result<(), EspIOError> {
     request
         .into_response(
             200,
@@ -76,11 +76,11 @@ fn handle_get_index(
     request: Request<&mut EspHttpConnection>,
     ssid: Arc<Mutex<String>>,
     wifi_nets: Arc<Mutex<Vec<AccessPointInfo>>>,
-) -> Result<(), HandlerError> {
-    let available_ssid_options = get_available_ssids(&wifi_nets.lock()?);
+) -> Result<(), EspIOError> {
+    let available_ssid_options = get_available_ssids(&wifi_nets.lock().unwrap());
     let page = format!(
         include_str!("web/index.html"),
-        ssid = ssid.lock()?,
+        ssid = ssid.lock().unwrap(),
         wpa2 = "",
         available_ssids = available_ssid_options
     );
@@ -93,18 +93,18 @@ fn handle_post_index(
     ssid: Arc<Mutex<String>>,
     wpa2: Arc<Mutex<String>>,
     wifi_runner: Sender<WifiRunner>,
-) -> Result<(), HandlerError> {
+) -> Result<(), EspIOError> {
     let mut scratch = [0; 256];
     let len = request.read(&mut scratch)?;
-    let req = std::str::from_utf8(&scratch[0..len])?;
+    let req = std::str::from_utf8(&scratch[0..len]).unwrap();
 
     for part in req.split('&') {
         let Some((key, value)) = part.split_once('=') else {
             continue;
         };
         match key {
-            "ssid" => *ssid.lock()? = urlencoding::decode(value)?.into_owned(),
-            "wpa2" => *wpa2.lock()? = urlencoding::decode(value)?.into_owned(),
+            "ssid" => *ssid.lock().unwrap() = urlencoding::decode(value).unwrap().into_owned(),
+            "wpa2" => *wpa2.lock().unwrap() = urlencoding::decode(value).unwrap().into_owned(),
             _ => (),
         }
     }
@@ -112,12 +112,16 @@ fn handle_post_index(
     // Let's configure the Wi-Fi with the provided SSID and WPA2 password
     wifi_runner
         .send(WifiRunner::ChangeWifi(WifiCreds {
-            ssid: ssid.lock()?.clone(),
-            wpa2: wpa2.lock()?.clone(),
+            ssid: ssid.lock().unwrap().clone(),
+            wpa2: wpa2.lock().unwrap().clone(),
         }))
         .expect("Failed to send Wi-Fi credentials");
 
-    log::info!("SSID: {}, WPA2: {}", ssid.lock()?, wpa2.lock()?);
+    log::info!(
+        "SSID: {}, WPA2: {}",
+        ssid.lock().unwrap(),
+        wpa2.lock().unwrap()
+    );
     request.into_response(302, None, &[("Location", "/")])?;
     Ok(())
 }
@@ -127,7 +131,7 @@ fn handle_get_scan(
     wifi_nets: Arc<Mutex<Vec<AccessPointInfo>>>,
     wifi_update_pair: Arc<(Mutex<bool>, Condvar)>,
     wifi_runner: Sender<WifiRunner>,
-) -> Result<(), HandlerError> {
+) -> Result<(), EspIOError> {
     let (lock, cvar) = &*wifi_update_pair;
     let mut wifi_update = lock.lock().unwrap();
     wifi_runner
@@ -138,7 +142,7 @@ fn handle_get_scan(
         wifi_update = cvar.wait(wifi_update).unwrap();
     }
     *wifi_update = false;
-    let available_ssid_options = get_available_ssids(&wifi_nets.lock()?);
+    let available_ssid_options = get_available_ssids(&wifi_nets.lock().unwrap());
     request
         .into_ok_response()?
         .write_all(available_ssid_options.as_bytes())?;
