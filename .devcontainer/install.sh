@@ -8,6 +8,15 @@ install_rust() {
         libudev-dev \
         pkg-config
 
+    # also required for esp
+    apt-get install -y \
+        clang \
+        libclang-dev
+
+    # specific deps copied from <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html#for-linux-users>
+    apt-get install -y \
+        git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
+
     # install rustup with nightly toolchain and rust-src
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
         -y --default-toolchain nightly --profile minimal --component rust-src
@@ -17,7 +26,9 @@ install_rust() {
     # install binstall
     curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
-    cargo binstall --no-confirm espflash
+    cargo binstall --no-confirm \
+        espflash \
+        ldproxy
 }
 
 install_jekyll() {
