@@ -19,14 +19,15 @@ std = ["alloc", "esp-idf-svc/binstart", "esp-idf-svc/std"]
 alloc = ["esp-idf-svc/alloc"]
 
 [dependencies]
+esp-idf-svc = { version = "0.49", default-features = false }
+heapless = "0.8"
 log = { version = "0.4", default-features = false }
-esp-idf-svc = { version = "0.49.1", default-features = false }
-urlencoding = "2.1.3"
-heapless = "0.8.0"
+thiserror = "1.0.63"
+urlencoding = "2"
 cc1101 = {git = "https://github.com/mineiwik/cc1101.git", branch = "main", features = ["std"]}
 
 [build-dependencies]
-embuild = { version = "0.32.0", features = ["espidf"] }
+embuild = { version = "0.32", features = ["espidf"] }
 
 [[bin]]
 name = "chrononauts-board"

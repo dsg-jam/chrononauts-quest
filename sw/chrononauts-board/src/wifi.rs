@@ -22,8 +22,8 @@ pub enum WifiRunner {
 
 #[derive(Debug)]
 pub struct WifiCreds {
-    pub ssid: String,
-    pub wpa2: String,
+    pub ssid: heapless::String<32>,
+    pub wpa2: heapless::String<64>,
 }
 
 pub struct ChrononautsWifi<'a> {
