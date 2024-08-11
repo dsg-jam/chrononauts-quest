@@ -1,0 +1,12 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+	"name": "Embedded",
+	"build": {
+		"dockerfile": "./Dockerfile"
+	},
+	// grant access to host peripherals
+	"runArgs": [
+		"--privileged"
+	],
+	"remoteUser": "root",
+}
