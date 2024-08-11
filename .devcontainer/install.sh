@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-main() {
-    set -x
-
+install_rust() {
     # install dependencies for building espflash from source.
     # at the time of writing the quickinstall binstall method is broken.
-    apt-get update && apt-get install -y \
+    apt-get install -y \
         libudev-dev \
         pkg-config
 
@@ -20,6 +18,28 @@ main() {
     curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
     cargo binstall --no-confirm espflash
+}
+
+install_jekyll() {
+    apt-get install -y \
+        ruby \
+        ruby-dev \
+        ruby-rubygems
+
+    # https://github.com/ntkme/sass-embedded-host-ruby/issues/130
+    gem install sass-embedded -v 1.62.1
+    gem install bundler jekyll github-pages
+}
+
+main() {
+    set -x
+
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+
+    install_jekyll
+    install_rust
 
     rm -rf "$0"
 }

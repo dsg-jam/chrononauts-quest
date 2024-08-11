@@ -9,4 +9,14 @@
 		"--privileged"
 	],
 	"remoteUser": "root",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"BarbossHack.crates-io",
+				"rust-lang.rust-analyzer",
+				"sissel.shopify-liquid",
+				"streetsidesoftware.code-spell-checker",
+			]
+		}
+	}
 }
