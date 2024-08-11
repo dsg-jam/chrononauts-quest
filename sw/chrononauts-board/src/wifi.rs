@@ -89,8 +89,8 @@ impl<'a> ChrononautsWifi<'a> {
                     self.wifi
                         .set_configuration(&wifi::Configuration::Mixed(
                             ClientConfiguration {
-                                ssid: creds.ssid.parse().unwrap(),
-                                password: creds.wpa2.parse().unwrap(),
+                                ssid: creds.ssid,
+                                password: creds.wpa2,
                                 ..Default::default()
                             },
                             AccessPointConfiguration {
