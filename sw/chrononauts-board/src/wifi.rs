@@ -101,12 +101,12 @@ impl<'a> ChrononautsWifi<'a> {
                             },
                         ))
                         .unwrap();
-                    self.wifi.connect().unwrap();
+                    self.wifi.connect()?;
                 }
                 WifiRunner::GetWifi => {
                     let (lock, cvar) = &*update_pair;
                     let mut wifi_update = lock.lock().unwrap();
-                    self.scan_for_available_ssids().unwrap();
+                    self.scan_for_available_ssids()?;
                     *wifi_update = true;
                     cvar.notify_one();
                 }

@@ -101,18 +101,14 @@ fn main() -> Result<(), EspError> {
     log::info!("DNS server started");
 
     log::info!("Starting radio...");
+    radio.init_radio().expect("Radio init failed");
     thread::spawn(move || {
-        log::info!("Init radio...");
-        radio.init_radio();
-
         let mut previous_level = false;
         let mut button_state = false;
         let mut last_change_time = SystemTime::now();
 
         loop {
-            let (_payload, len) = radio.get_packet();
-
-            if len > 0 {
+            if let Ok((_payload, _len)) = radio.get_packet() {
                 led1.toggle().unwrap();
             }
 
@@ -124,10 +120,11 @@ fn main() -> Result<(), EspError> {
             )
             .unwrap()
             {
-                log::info!("Button pressed");
                 let mut msg = "Button".as_bytes().to_vec();
-                radio.send_packet(&mut msg);
-                led2.toggle().unwrap();
+                if radio.send_packet(&mut msg).is_ok() {
+                    log::info!("Packet sent");
+                    led2.toggle().unwrap();
+                }
             };
             sleep(Duration::from_millis(20));
         }
