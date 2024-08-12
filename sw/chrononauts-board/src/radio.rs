@@ -66,8 +66,7 @@ impl<'a> ChrononautsRadio<'a> {
 
         self.0.set_data_rate(4800)?;
 
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::DEVIATN, 0x40)?;
+        self.0.set_deviation(0xc60000)?;
 
         self.0.set_idle_state()?;
         self.0
