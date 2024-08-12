@@ -37,113 +37,61 @@ impl<'a> ChrononautsRadio<'a> {
 
         self.0.set_idle_state().unwrap();
 
-        //self.0.white_data_enable(true).unwrap();
-        //self.0.crc_enable(true).unwrap(); on by default
-        //self.0.set_packet_length(cc1101::PacketLength::Variable(61)).unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::PKTCTRL0, 0x45)
-            .unwrap();
+        self.0.white_data_enable(true).unwrap();
+        self.0.crc_enable(true).unwrap();
+        self.0.set_packet_length(cc1101::PacketLength::Variable(61)).unwrap();
 
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::CHANNR, 0)
-            .unwrap();
+        self.0.set_channel_number(0).unwrap();
         self.0.set_frequency(433_920_000).unwrap();
 
-        //self.0.set_data_rate(4800).unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::MDMCFG4, 0xC7)
-            .unwrap();
+        self.0.set_data_rate(4800).unwrap();
+
         self.0
             .set_register(cc1101::lowlevel::registers::Config::DEVIATN, 0x40)
             .unwrap();
 
         self.0.set_idle_state().unwrap();
-        //self.0.set_sync_mode(cc1101::SyncMode::MatchPartialRepeated(0xD391)).unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::FSCTRL1, 0x06)
-            .unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::MDMCFG2, 0x17)
-            .unwrap();
+        self.0.set_sync_mode(cc1101::SyncMode::MatchPartialRepeatedCS(0xD391)).unwrap();
+        self.0.set_modulation_format(cc1101::ModulationFormat::GaussianFrequencyShiftKeying).unwrap();
+        self.0.set_freq_if(1024).unwrap();
 
         self.0.set_rx_state().unwrap();
 
-        self.0.set_power(cc1101::Power::Power10Dbm).unwrap();
+        self.0.set_power(cc1101::Power::Power5Dbm).unwrap();
 
         //self.0.set_address_filter(cc1101::AddressFilter::Disabled).unwrap();
         self.0.set_idle_state().unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::PKTCTRL1, 4 * 32 + 4)
-            .unwrap();
+
+        self.0.set_pqt(4).unwrap();
+        self.0.append_status_enable(true).unwrap();
 
         self.0.set_rx_state().unwrap();
     }
 
     fn init_common_registers(&mut self) {
-        //writeRegister(CC1101_IOCFG0, 0x01); // Rx report only. This is different than openelec and panstamp lib
-        //self.0.set_gdo0_cfg(cc1101::Gdo0Cfg::SyncWord).unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::IOCFG0, 0x06)
-            .unwrap();
+        self.0.set_gdo0_cfg(cc1101::Gdo0Cfg::SyncWord).unwrap();
 
-        //self.0.set_fifo_threshold(cc1101::FifoThreshold::TX_1_RX_64).unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::FIFOTHR, 0x4F)
-            .unwrap();
+        self.0.set_fifo_threshold(cc1101::FifoThreshold::TX_1_RX_64).unwrap();
+        self.0.adc_retention_enable(true).unwrap();
 
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::MDMCFG3, 0x83)
-            .unwrap();
+        self.0.set_autocalibration(cc1101::AutoCalibration::FromIdle).unwrap();
+        self.0.set_po_timeout(cc1101::PoTimeout::EXPIRE_COUNT_64).unwrap();
 
-        //self.0.adc_retention_enable(true).unwrap();
+        self.0.demodulator_freeze_enable(false).unwrap();
 
-        //self.0.set_autocalibration(cc1101::AutoCalibration::FromIdle).unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::MCSM0, 0x18)
-            .unwrap();
+        self.0.set_max_dvga_gain(0x1).unwrap();
 
-        //self.0.demodulator_freeze_enable(false).unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::FOCCFG, 0x16)
-            .unwrap();
+        self.0.set_wor_res(3).unwrap();
 
-        //self.0.set_max_dvga_gain(0x1).unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::AGCCTRL2, 0x43)
-            .unwrap();
+        self.0.set_fscal3(3).unwrap();
+        self.0.vco_core_enable(true).unwrap();
+        self.0.set_fscal1(0x00).unwrap();
+        self.0.set_fscal0(0x1F).unwrap();
+        self.0.set_test2(0x81).unwrap();
+        self.0.set_test1(0x35).unwrap();
 
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::WORCTRL, 0xFB)
-            .unwrap();
+        self.0.vco_sel_cal_enable(false).unwrap();
 
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::FSCAL3, 0xE9)
-            .unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::FSCAL2, 0x2A)
-            .unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::FSCAL1, 0x00)
-            .unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::FSCAL0, 0x1F)
-            .unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::TEST2, 0x81)
-            .unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::TEST1, 0x35)
-            .unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::TEST0, 0x09)
-            .unwrap();
-
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::PKTLEN, 61)
-            .unwrap();
-        self.0
-            .set_register(cc1101::lowlevel::registers::Config::MCSM1, 0x30)
-            .unwrap();
     }
 
     pub fn send_packet(&mut self, msg: &mut [u8]) {
