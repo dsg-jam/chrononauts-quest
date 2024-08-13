@@ -1,16 +1,21 @@
 use core::{fmt, str};
 use std::{
-    fmt::{Display, Formatter},
-    thread::sleep,
-    time::Duration,
+    cmp::min, fmt::{Display, Formatter}, thread::sleep, time::Duration
 };
 
 use cc1101::{Cc1101, Error};
 use esp_idf_svc::hal::spi::{SpiDeviceDriver, SpiDriver, SpiError};
 
+// Maximum packet size is 61 bytes (64 - 3 bytes for length and RSSI/LQI)
+const MAX_PACKET_SIZE: usize = 61;
+
+const RADIO_FREQUENCY_HZ: u64 = 433_920_000;
+
+
 #[derive(Debug, thiserror::Error)]
 pub enum RadioError {
     EmptyPayload,
+    RadioNotFound,
     #[error(transparent)]
     SpiError(#[from] Error<SpiError>),
 }
@@ -19,6 +24,7 @@ impl Display for RadioError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             RadioError::EmptyPayload => write!(f, "Empty payload"),
+            RadioError::RadioNotFound => write!(f, "Radio not found"),
             RadioError::SpiError(e) => write!(f, "SPI error: {}", e),
         }
     }
@@ -41,11 +47,11 @@ impl<'a> ChrononautsRadio<'a> {
         let (_, version) = self.0.get_hw_info()?;
 
         if version < 0x14 || version == 0xFF {
-            // should exit here
             log::info!(
                 "Radio not found - should be >= 0x14 but got 0x{:X}",
                 version
             );
+            return Err(RadioError::RadioNotFound);
         }
 
         log::info!("Radio found - version 0x{:X}", version);
@@ -59,10 +65,10 @@ impl<'a> ChrononautsRadio<'a> {
         self.0.white_data_enable(true)?;
         self.0.crc_enable(true)?;
         self.0
-            .set_packet_length(cc1101::PacketLength::Variable(61))?;
+            .set_packet_length(cc1101::PacketLength::Variable(MAX_PACKET_SIZE as u8))?;
 
         self.0.set_channel_number(0)?;
-        self.0.set_frequency(433_920_000)?;
+        self.0.set_frequency(RADIO_FREQUENCY_HZ)?;
 
         self.0.set_data_rate(4800)?;
 
@@ -73,7 +79,10 @@ impl<'a> ChrononautsRadio<'a> {
             .set_sync_mode(cc1101::SyncMode::MatchPartialRepeatedCS(0xD391))?;
         self.0
             .set_modulation_format(cc1101::ModulationFormat::GaussianFrequencyShiftKeying)?;
-        self.0.set_freq_if(1024)?;
+        
+        // Sets the IF frequency (radio MUST be in IDLE state)
+        self.0.set_idle_state()?;
+        self.0.set_freq_if(152_343)?;
 
         self.0.set_rx_state()?;
 
@@ -90,19 +99,28 @@ impl<'a> ChrononautsRadio<'a> {
     }
 
     fn init_common_registers(&mut self) -> Result<(), RadioError> {
+        // Asserts when sync word has been sent / received, and de-asserts at the end of the packet
         self.0.set_gdo0_cfg(cc1101::Gdo0Cfg::SyncWord)?;
 
+        // Set Fifo threshold to 1 byte in TX and 64 bytes in RX
         self.0
             .set_fifo_threshold(cc1101::FifoThreshold::TX_1_RX_64)?;
+        
+        // Enable ADC retention mode
         self.0.adc_retention_enable(true)?;
 
+        // Auto calibration from IDLE to RX/TX
         self.0
             .set_autocalibration(cc1101::AutoCalibration::FromIdle)?;
+        
+        // Wait ~150 us for the crystal oscillator to stabilize (Ripple counter must expire 64 times)
         self.0.set_po_timeout(cc1101::PoTimeout::EXPIRE_COUNT_64)?;
 
+        // Demidulator freeze disabled
         self.0.demodulator_freeze_enable(false)?;
 
-        self.0.set_max_dvga_gain(0x1)?;
+        // Reduces the maximum allowable DVGA gain. Restricts the use of all gain settings except the highest gain setting
+        self.0.set_max_dvga_gain(cc1101::DVGASetting::AllButHighest)?;
 
         self.0.set_wor_res(3)?;
 
@@ -125,17 +143,15 @@ impl<'a> ChrononautsRadio<'a> {
             return Err(RadioError::EmptyPayload);
         }
 
-        if size > 61 {
-            size = 61;
-        }
+        size = min(size, MAX_PACKET_SIZE);
 
         self.0.transmit(msg, size as u8)?;
 
         Ok(())
     }
 
-    pub fn get_packet(&mut self) -> Result<([u8; 61], u8), RadioError> {
-        let mut buf = [0; 61];
+    pub fn get_packet(&mut self) -> Result<([u8; MAX_PACKET_SIZE], u8), RadioError> {
+        let mut buf = [0; MAX_PACKET_SIZE];
         let mut length = 0u8;
         let ret = self.0.receive(&mut length, &mut buf)?;
         if let Ok(payload) = str::from_utf8(&buf) {
