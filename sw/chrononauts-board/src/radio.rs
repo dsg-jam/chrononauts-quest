@@ -1,4 +1,4 @@
-use core::{fmt, str};
+use core::fmt;
 use std::{
     cmp::min,
     fmt::{Display, Formatter},
@@ -8,6 +8,9 @@ use std::{
 
 use cc1101::{Cc1101, Error};
 use esp_idf_svc::hal::spi::{SpiDeviceDriver, SpiDriver, SpiError};
+pub use message::*;
+
+mod message;
 
 // Maximum packet size is 61 bytes (64 - 3 bytes for length and RSSI/LQI)
 const MAX_PACKET_SIZE: usize = 61;
@@ -157,20 +160,18 @@ impl<'a> ChrononautsRadio<'a> {
         let mut buf = [0; MAX_PACKET_SIZE];
         let mut length = 0u8;
         let ret = self.0.receive(&mut length, &mut buf)?;
-        if let Ok(payload) = str::from_utf8(&buf) {
-            // from TI app note
-            let rssi_dec = ret[0] as i16;
-            let rssi_offset = 74;
-            let rssi_dbm = if rssi_dec >= 128 {
-                ((rssi_dec - 256) / 2) - rssi_offset
-            } else {
-                (rssi_dec / 2) - rssi_offset
-            };
 
-            log::info!("Packet received: {:?}, size {:?}", payload, length);
-            log::info!("RSSI: {:?}", rssi_dbm);
-            log::info!("LQI: {:?}", ret[1] & 0x7F);
-        }
+        // from TI app note
+        let rssi_dec = ret[0] as i16;
+        let rssi_offset = 74;
+        let rssi_dbm = if rssi_dec >= 128 {
+            ((rssi_dec - 256) / 2) - rssi_offset
+        } else {
+            (rssi_dec / 2) - rssi_offset
+        };
+
+        log::info!("RSSI: {:?}", rssi_dbm);
+        log::info!("LQI: {:?}", ret[1] & 0x7F);
 
         self.0.set_idle_state()?;
         self.0.flush_rx_fifo_buffer()?;

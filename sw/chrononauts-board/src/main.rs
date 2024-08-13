@@ -16,6 +16,7 @@ use esp_idf_svc::{
     sys::{self, EspError},
     wifi::{AccessPointInfo, WifiDriver},
 };
+use radio::{FromBytes, ToBytes};
 use std::{
     sync::{mpsc, Arc, Condvar, Mutex},
     thread::{self, sleep},
@@ -108,7 +109,9 @@ fn main() -> Result<(), EspError> {
         let mut last_change_time = SystemTime::now();
 
         loop {
-            if let Ok((_payload, _len)) = radio.get_packet() {
+            if let Ok((payload, _len)) = radio.get_packet() {
+                let packet = radio::ChrononautsPackage::from_bytes(&payload).unwrap();
+                log::info!("Packet received: {:?}", packet);
                 led1.toggle().unwrap();
             }
 
@@ -120,8 +123,11 @@ fn main() -> Result<(), EspError> {
             )
             .unwrap()
             {
-                let mut msg = "Button".as_bytes().to_vec();
-                if radio.send_packet(&mut msg).is_ok() {
+                let payload = radio::ChrononautsPayload::SyncRequest;
+                let header = radio::ChrononautsHeader::new(0, 1, 8);
+                let package = radio::ChrononautsPackage { header, payload };
+                let mut packet = package.to_bytes();
+                if radio.send_packet(&mut packet).is_ok() {
                     log::info!("Packet sent");
                     led2.toggle().unwrap();
                 }
