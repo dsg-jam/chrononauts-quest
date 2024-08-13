@@ -1,6 +1,9 @@
 use core::{fmt, str};
 use std::{
-    cmp::min, fmt::{Display, Formatter}, thread::sleep, time::Duration
+    cmp::min,
+    fmt::{Display, Formatter},
+    thread::sleep,
+    time::Duration,
 };
 
 use cc1101::{Cc1101, Error};
@@ -10,7 +13,6 @@ use esp_idf_svc::hal::spi::{SpiDeviceDriver, SpiDriver, SpiError};
 const MAX_PACKET_SIZE: usize = 61;
 
 const RADIO_FREQUENCY_HZ: u64 = 433_920_000;
-
 
 #[derive(Debug, thiserror::Error)]
 pub enum RadioError {
@@ -79,14 +81,14 @@ impl<'a> ChrononautsRadio<'a> {
             .set_sync_mode(cc1101::SyncMode::MatchPartialRepeatedCS(0xD391))?;
         self.0
             .set_modulation_format(cc1101::ModulationFormat::GaussianFrequencyShiftKeying)?;
-        
+
         // Sets the IF frequency (radio MUST be in IDLE state)
         self.0.set_idle_state()?;
         self.0.set_freq_if(152_343)?;
 
         self.0.set_rx_state()?;
 
-        self.0.set_power(cc1101::Power::Power5Dbm)?;
+        self.0.set_power(cc1101::PowerLevel::Power5Dbm)?;
 
         self.0.set_idle_state()?;
 
@@ -100,19 +102,19 @@ impl<'a> ChrononautsRadio<'a> {
 
     fn init_common_registers(&mut self) -> Result<(), RadioError> {
         // Asserts when sync word has been sent / received, and de-asserts at the end of the packet
-        self.0.set_gdo0_cfg(cc1101::Gdo0Cfg::SyncWord)?;
+        self.0.set_gdo0_cfg(cc1101::GdoCfg::SYNC_WORD)?;
 
         // Set Fifo threshold to 1 byte in TX and 64 bytes in RX
         self.0
             .set_fifo_threshold(cc1101::FifoThreshold::TX_1_RX_64)?;
-        
+
         // Enable ADC retention mode
         self.0.adc_retention_enable(true)?;
 
         // Auto calibration from IDLE to RX/TX
         self.0
             .set_autocalibration(cc1101::AutoCalibration::FromIdle)?;
-        
+
         // Wait ~150 us for the crystal oscillator to stabilize (Ripple counter must expire 64 times)
         self.0.set_po_timeout(cc1101::PoTimeout::EXPIRE_COUNT_64)?;
 
@@ -120,7 +122,8 @@ impl<'a> ChrononautsRadio<'a> {
         self.0.demodulator_freeze_enable(false)?;
 
         // Reduces the maximum allowable DVGA gain. Restricts the use of all gain settings except the highest gain setting
-        self.0.set_max_dvga_gain(cc1101::DVGASetting::AllButHighest)?;
+        self.0
+            .set_max_dvga_gain(cc1101::DVGASetting::AllButHighest)?;
 
         self.0.set_wor_res(3)?;
 
