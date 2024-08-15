@@ -22,6 +22,8 @@ pub enum RadioError {
     EmptyPayload,
     RadioNotFound,
     #[error(transparent)]
+    MessageError(#[from] MessageError),
+    #[error(transparent)]
     SpiError(#[from] Error<SpiError>),
 }
 
@@ -31,6 +33,7 @@ impl Display for RadioError {
             RadioError::EmptyPayload => write!(f, "Empty payload"),
             RadioError::RadioNotFound => write!(f, "Radio not found"),
             RadioError::SpiError(e) => write!(f, "SPI error: {}", e),
+            RadioError::MessageError(e) => write!(f, "Message error: {}", e),
         }
     }
 }
@@ -142,8 +145,9 @@ impl<'a> ChrononautsRadio<'a> {
         Ok(())
     }
 
-    pub fn send_packet(&mut self, msg: &mut [u8]) -> Result<(), RadioError> {
-        let mut size = msg.len();
+    pub fn send_packet(&mut self, packet: ChrononautsPackage) -> Result<(), RadioError> {
+        let mut packet = packet.to_bytes();
+        let mut size = packet.len();
 
         if size < 1 {
             return Err(RadioError::EmptyPayload);
@@ -151,12 +155,12 @@ impl<'a> ChrononautsRadio<'a> {
 
         size = min(size, MAX_PACKET_SIZE);
 
-        self.0.transmit(msg, size as u8)?;
+        self.0.transmit(&mut packet, size as u8)?;
 
         Ok(())
     }
 
-    pub fn get_packet(&mut self) -> Result<([u8; MAX_PACKET_SIZE], u8), RadioError> {
+    pub fn get_packet(&mut self) -> Result<ChrononautsPackage, RadioError> {
         let mut buf = [0; MAX_PACKET_SIZE];
         let mut length = 0u8;
         let ret = self.0.receive(&mut length, &mut buf)?;
@@ -176,6 +180,7 @@ impl<'a> ChrononautsRadio<'a> {
         self.0.set_idle_state()?;
         self.0.flush_rx_fifo_buffer()?;
         self.0.set_rx_state()?;
-        Ok((buf, length))
+        let packet = ChrononautsPackage::from_bytes(&buf[..length as usize])?;
+        Ok(packet)
     }
 }

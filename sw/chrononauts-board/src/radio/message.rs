@@ -29,7 +29,7 @@ pub trait FromBytes {
 /// The package is structured as follows:
 /// Header (3 bytes) | Payload (max 58 bytes)
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct ChrononautsPackage {
     pub header: ChrononautsHeader,
     pub payload: ChrononautsPayload,
@@ -144,11 +144,8 @@ impl ToBytes for ChrononautsPayload {
     fn to_bytes(&self) -> heapless::Vec<u8, MAX_PACKET_SIZE> {
         let mut data = heapless::Vec::new();
         data.push((*self).into()).unwrap();
-        match self {
-            ChrononautsPayload::SetLevel(level) => {
-                data.push(*level).unwrap();
-            }
-            _ => {}
+        if let ChrononautsPayload::SetLevel(level) = self {
+            data.push(*level).unwrap();
         }
         data
     }
