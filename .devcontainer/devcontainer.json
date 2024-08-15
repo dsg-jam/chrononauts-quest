@@ -13,10 +13,11 @@
 		"vscode": {
 			"extensions": [
 				"BarbossHack.crates-io",
+				"foxundermoon.shell-format",
 				"rust-lang.rust-analyzer",
 				"sissel.shopify-liquid",
 				"streetsidesoftware.code-spell-checker",
-				"tamasfe.even-better-toml"
+				"tamasfe.even-better-toml",
 			],
 			"settings": {
 				"rust-analyzer.linkedProjects": [

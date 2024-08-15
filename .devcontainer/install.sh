@@ -47,6 +47,7 @@ install_gcloud() {
 
     curl https://sdk.cloud.google.com >"$installer_path"
     bash "$installer_path" --disable-prompts
+    bash /root/google-cloud-sdk/install.sh --path-update=true
 
     rm -f "$installer_path"
 }
@@ -64,10 +65,12 @@ main() {
 
     apt-get update
 
-    install_jekyll
-    install_rust
-    install_gcloud
-    install_node
+    install_jekyll &
+    install_rust &
+    install_gcloud &
+    install_node &
+
+    wait
 
     rm -rf "$0"
 }
