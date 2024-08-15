@@ -42,6 +42,21 @@ install_jekyll() {
     gem install bundler jekyll github-pages
 }
 
+install_gcloud() {
+    local installer_path="/tmp/install-gcloud.sh"
+
+    curl https://sdk.cloud.google.com >"$installer_path"
+    bash "$installer_path" --disable-prompts
+
+    rm -f "$installer_path"
+}
+
+install_node() {
+    apt-get install -y \
+        nodejs \
+        npm
+}
+
 main() {
     set -x
 
@@ -51,6 +66,8 @@ main() {
 
     install_jekyll
     install_rust
+    install_gcloud
+    install_node
 
     rm -rf "$0"
 }
