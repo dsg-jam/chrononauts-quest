@@ -1,13 +1,28 @@
 // For format details, see https://aka.ms/devcontainer.json.
 {
-	"name": "Jekyll",
-	"image": "mcr.microsoft.com/devcontainers/jekyll:2-bookworm",
+	"name": "Embedded",
+	"build": {
+		"dockerfile": "./Dockerfile"
+	},
+	// grant access to host peripherals
+	"runArgs": [
+		"--privileged"
+	],
+	"remoteUser": "root",
 	"customizations": {
 		"vscode": {
 			"extensions": [
+				"BarbossHack.crates-io",
+				"rust-lang.rust-analyzer",
 				"sissel.shopify-liquid",
-				"streetsidesoftware.code-spell-checker"
-			]
+				"streetsidesoftware.code-spell-checker",
+				"tamasfe.even-better-toml"
+			],
+			"settings": {
+				"rust-analyzer.linkedProjects": [
+					"sw/chrononauts-board/Cargo.toml"
+				]
+			}
 		}
 	}
 }

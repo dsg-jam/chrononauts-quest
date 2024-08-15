@@ -34,8 +34,8 @@ enum WifiRunner {
 
 #[derive(Debug)]
 struct WifiCreds {
-    ssid: String,
-    wpa2: String,
+    ssid: heapless::String<32>,
+    wpa2: heapless::String<64>,
 }
 
 fn main() -> Result<(), EspError> {
@@ -82,8 +82,8 @@ fn main() -> Result<(), EspError> {
             ..Default::default()
         },
         AccessPointConfiguration {
-            ssid: env!("SSID").into(),
-            password: env!("SSID_PASSWORD").into(),
+            ssid: env!("SSID").parse().unwrap(),
+            password: env!("SSID_PASSWORD").parse().unwrap(),
             auth_method: wifi::AuthMethod::WPA2Personal,
             ..Default::default()
         },
@@ -103,13 +103,13 @@ fn main() -> Result<(), EspError> {
                 WifiRunner::ChangeWifi(creds) => {
                     wifi.set_configuration(&wifi::Configuration::Mixed(
                         ClientConfiguration {
-                            ssid: creds.ssid.as_str().into(),
-                            password: creds.wpa2.as_str().into(),
+                            ssid: creds.ssid,
+                            password: creds.wpa2,
                             ..Default::default()
                         },
                         AccessPointConfiguration {
-                            ssid: env!("SSID").into(),
-                            password: env!("SSID_PASSWORD").into(),
+                            ssid: env!("SSID").parse().unwrap(),
+                            password: env!("SSID_PASSWORD").parse().unwrap(),
                             auth_method: wifi::AuthMethod::WPA2Personal,
                             ..Default::default()
                         },
