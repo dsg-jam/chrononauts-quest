@@ -110,7 +110,7 @@ fn handle_post_index(
 ) -> Result<(), ServerError> {
     let mut scratch = [0; 256];
     let len = request.read(&mut scratch)?;
-    let req = std::str::from_utf8(&scratch[0..len])?;
+    let req = std::str::from_utf8(&scratch[0..len]).unwrap();
 
     for part in req.split('&') {
         let Some((key, value)) = part.split_once('=') else {

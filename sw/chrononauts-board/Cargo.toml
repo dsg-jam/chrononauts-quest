@@ -24,6 +24,7 @@ heapless = "0.8"
 log = { version = "0.4", default-features = false }
 thiserror = "1.0.63"
 urlencoding = "2"
+cc1101 = {git = "https://github.com/mineiwik/cc1101.git", branch = "main", features = ["std"]}
 
 [build-dependencies]
 embuild = { version = "0.32", features = ["espidf"] }
