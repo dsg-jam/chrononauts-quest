@@ -4,17 +4,17 @@ set -euo pipefail
 install_rust() {
     # install dependencies for building espflash from source.
     # at the time of writing the quickinstall binstall method is broken.
-    apt-get install -y \
+    apt-get -o DPkg::Lock::Timeout=120 install -y \
         libudev-dev \
         pkg-config
 
     # also required for esp
-    apt-get install -y \
+    apt-get -o DPkg::Lock::Timeout=120 install -y \
         clang \
         libclang-dev
 
     # specific deps copied from <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html#for-linux-users>
-    apt-get install -y \
+    apt-get -o DPkg::Lock::Timeout=120 install -y \
         git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
 
     # install rustup with nightly toolchain and rust-src
@@ -32,7 +32,7 @@ install_rust() {
 }
 
 install_jekyll() {
-    apt-get install -y \
+    apt-get -o DPkg::Lock::Timeout=120 install -y \
         ruby \
         ruby-dev \
         ruby-rubygems
@@ -53,7 +53,7 @@ install_gcloud() {
 }
 
 install_node() {
-    apt-get install -y \
+    apt-get -o DPkg::Lock::Timeout=120 install -y \
         nodejs \
         npm
 }
