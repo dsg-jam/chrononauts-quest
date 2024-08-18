@@ -9,12 +9,17 @@
 		"--privileged"
 	],
 	"remoteUser": "root",
+	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/stuartleeks/dev-container-features/shell-history:0": {}
+	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"BarbossHack.crates-io",
 				"esbenp.prettier-vscode",
 				"foxundermoon.shell-format",
+				"ms-azuretools.vscode-docker",
 				"rust-lang.rust-analyzer",
 				"sissel.shopify-liquid",
 				"streetsidesoftware.code-spell-checker",
