@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <main className={styles.main}>
       <TerminalRenderer>
-        <p style={{ fontSize: "0.4em" }}>
+        <p style={{ fontSize: "0.4em", fontFamily: "monospace" }}>
           {`
  ▄████████    ▄█    █▄       ▄████████  ▄██████▄  ███▄▄▄▄    ▄██████▄  ███▄▄▄▄      ▄████████ ███    █▄      ███        ▄████████ 
 ███    ███   ███    ███     ███    ███ ███    ███ ███▀▀▀██▄ ███    ███ ███▀▀▀██▄   ███    ███ ███    ███ ▀█████████▄   ███    ███ 

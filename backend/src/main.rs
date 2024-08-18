@@ -20,7 +20,11 @@ async fn main() -> anyhow::Result<()> {
 
     let state = State::new().await?;
 
-    let listener = TcpListener::bind("0.0.0.0:8080").await?;
+    let port = std::env::var("PORT")
+        .ok()
+        .and_then(|port| port.parse().ok())
+        .unwrap_or(8080);
+    let listener = TcpListener::bind(("0.0.0.0", port)).await?;
 
     while let Ok((stream, _)) = listener.accept().await {
         accept_connection(state.clone(), stream);

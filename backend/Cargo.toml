@@ -20,7 +20,11 @@ tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 tokio-tungstenite = "0.23"
 tracing = "0.1"
-tracing-subscriber = "0.3"
+tracing-subscriber = { version = "0.3", features = ["json"] }
+
+[dev-dependencies]
+# enable TLS support for examples
+tokio-tungstenite = { version = "0.23", features = ["rustls-tls-native-roots"] }
 
 [workspace]
 resolver = "2"

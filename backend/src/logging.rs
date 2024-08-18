@@ -11,6 +11,6 @@ pub fn init() {
                 .with_default(Level::INFO)
                 .with_target("backend", Level::TRACE),
         )
-        .with(fmt::layer())
+        .with(fmt::layer().json())
         .init();
 }

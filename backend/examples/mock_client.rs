@@ -9,7 +9,11 @@ use tokio_tungstenite::tungstenite::Message;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let (ws_stream, _) = tokio_tungstenite::connect_async("ws://localhost:8080").await?;
+    let url = std::env::args().skip(1).next();
+    let url = url.as_deref().unwrap_or("wss://api.chrononauts.quest");
+
+    println!("connecting to: {url}");
+    let (ws_stream, _) = tokio_tungstenite::connect_async(url).await?;
     let (write, read) = ws_stream.split();
 
     let write = write
