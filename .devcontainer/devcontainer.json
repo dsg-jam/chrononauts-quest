@@ -13,6 +13,7 @@
 		"vscode": {
 			"extensions": [
 				"BarbossHack.crates-io",
+				"esbenp.prettier-vscode",
 				"foxundermoon.shell-format",
 				"rust-lang.rust-analyzer",
 				"sissel.shopify-liquid",
