@@ -32,7 +32,7 @@ pub struct GameState {
 
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum BoardId {
+pub enum DeviceId {
     Player1,
     Player2,
 }
@@ -48,17 +48,10 @@ pub enum Direction {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct LabyrinthAction {
-    /// Which board is taking the action.
-    pub board: BoardId,
+    /// Which device is taking the action.
+    pub device: DeviceId,
     /// Direction the player is facing.
     pub direction: Direction,
     /// Whether the player is taking a step.
-    #[serde(skip_serializing_if = "is_false")]
     pub step: bool,
-}
-
-
-
-const fn is_false(x: &bool) -> bool {
-    return !*x;
 }
