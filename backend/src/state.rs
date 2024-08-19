@@ -3,6 +3,8 @@ use std::net::IpAddr;
 use chrono::{DateTime, Utc};
 use firestore::{paths, FirestoreDb, FirestoreReference};
 
+mod labyrinth;
+
 #[derive(Clone)]
 pub struct State {
     db: FirestoreDb,
