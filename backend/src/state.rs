@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 
 use chrono::{DateTime, Utc};
-use firestore::{paths, FirestoreDb, FirestoreMemListenStateStorage, FirestoreReference};
+use firestore::{paths, FirestoreDb, FirestoreReference};
 
 #[derive(Clone)]
 pub struct State {
@@ -11,7 +11,6 @@ pub struct State {
 impl State {
     pub async fn new() -> anyhow::Result<Self> {
         let db = FirestoreDb::new(crate::consts::PROJECT_ID).await?;
-        db.create_listener(FirestoreMemListenStateStorage::new());
         Ok(Self { db })
     }
 

@@ -4,6 +4,8 @@ use tracing_subscriber::fmt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
+mod gcloud;
+
 pub fn init() {
     tracing_subscriber::registry()
         .with(
@@ -11,6 +13,6 @@ pub fn init() {
                 .with_default(Level::INFO)
                 .with_target("backend", Level::TRACE),
         )
-        .with(fmt::layer().json())
+        .with(fmt::layer().event_format(gcloud::Format))
         .init();
 }
