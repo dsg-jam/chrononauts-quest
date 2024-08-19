@@ -86,5 +86,5 @@ struct Game {
 }
 
 impl Game {
-    const COLLECTION: &str = "games";
+    const _COLLECTION: &str = "games";
 }

@@ -37,11 +37,11 @@ where
             event.record(&mut visitor);
             ser = visitor.take_serializer()?;
 
-            ser.serialize_entry("logging.googleapis.com/labels", &LabelAdapter(&meta))?;
+            ser.serialize_entry("logging.googleapis.com/labels", &LabelAdapter(meta))?;
 
             ser.serialize_entry(
                 "logging.googleapis.com/sourceLocation",
-                &SourceLocationAdapter(&meta),
+                &SourceLocationAdapter(meta),
             )?;
             let current_span = event
                 .parent()
