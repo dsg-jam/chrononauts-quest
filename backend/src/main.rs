@@ -117,15 +117,16 @@ impl WsHeaders {
     fn update_from_request(&mut self, req: &Request) -> anyhow::Result<()> {
         let headers = req.headers();
         // See: <https://cloud.google.com/load-balancing/docs/https/#x-forwarded-for_header>
-        if let Some(header) = headers.get("X-Forwarded-For") {
-            let mut visit = || -> anyhow::Result<()> {
-                let mut ips = header.to_str()?.split(',').rev().map(IpAddr::from_str);
-                let _load_balancer_ip = ips.next().context("missing load-balancer-ip")??;
-                let client_ip = ips.next().context("missing client-ip")??;
-                self.client_ip = Some(client_ip);
-                Ok(())
-            };
-            visit().context("invalid X-Forwarded-For header")?;
+        if let Some(value) = headers.get("X-Forwarded-For") {
+            tracing::trace!(?value, "parsing X-Forwarded-For header");
+            let mut ips = value.to_str()?.split(',').rev().map(IpAddr::from_str);
+            let _load_balancer_ip = ips
+                .next()
+                .context("missing load-balancer-ip in X-Forwarded-For")??;
+            let client_ip = ips
+                .next()
+                .context("missing client-ip in X-Forwarded-For")??;
+            self.client_ip = Some(client_ip);
         }
         Ok(())
     }
