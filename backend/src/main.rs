@@ -2,17 +2,16 @@ use std::net::IpAddr;
 use std::str::FromStr;
 
 use anyhow::Context;
-use backend_api::{BoardMessage, GameState};
-use futures::{SinkExt, StreamExt, TryFutureExt};
+use futures::TryFutureExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::tungstenite::handshake::server::Request;
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
-use tokio_tungstenite::tungstenite::Message;
 use tracing::Instrument;
 
 use self::state::State;
 
+mod board;
 mod consts;
 mod logging;
 mod state;
@@ -32,74 +31,61 @@ async fn main() -> anyhow::Result<()> {
     let listener = TcpListener::bind(("0.0.0.0", port)).await?;
 
     while let Ok((stream, _)) = listener.accept().await {
-        accept_connection(state.clone(), stream);
+        tokio::spawn(
+            serve_connection(state.clone(), stream)
+                .inspect_err(|err| tracing::error!(err = &**err, "connection error"))
+                .instrument(tracing::info_span!(
+                    "connection",
+                    session = tracing::field::Empty
+                )),
+        );
     }
 
     Ok(())
 }
 
-fn accept_connection(state: State, stream: TcpStream) {
-    async fn inner(state: State, stream: TcpStream) -> anyhow::Result<()> {
-        let peer = stream.peer_addr().context("missing peer addr")?;
-        let span = tracing::Span::current();
+async fn serve_connection(state: State, stream: TcpStream) -> anyhow::Result<()> {
+    let peer = stream.peer_addr().context("missing peer addr")?;
+    let span = tracing::Span::current();
 
-        tracing::trace!("accepting websocket connection");
-        let mut ws_headers = None;
-        let mut ws_stream =
-            tokio_tungstenite::accept_hdr_async(stream, |req: &Request, response| {
-                ws_headers = Some(WsHeaders::extract(req));
-                Ok(response)
-            })
-            .await?;
+    tracing::trace!("accepting websocket connection");
+    let mut ws_headers = None;
+    let mut ws_stream = tokio_tungstenite::accept_hdr_async(stream, |req: &Request, response| {
+        ws_headers = Some(WsHeaders::extract(req));
+        Ok(response)
+    })
+    .await?;
 
-        let ws_headers = match ws_headers {
-            Some(Ok(v)) => v,
-            other => {
-                if let Some(Err(err)) = other {
-                    tracing::warn!(err = &*err, "dropping connection due to invalid headers");
-                }
-                let _ = ws_stream
-                    .close(Some(CloseFrame {
-                        code: CloseCode::Invalid,
-                        reason: "Invalid Headers".into(),
-                    }))
-                    .await;
-                return Ok(());
+    let ws_headers = match ws_headers {
+        Some(Ok(v)) => v,
+        other => {
+            if let Some(Err(err)) = other {
+                tracing::warn!(err = &*err, "dropping connection due to invalid headers");
             }
-        };
-
-        let session_id = state
-            .start_ws_session(ws_headers.client_ip.unwrap_or_else(|| peer.ip()))
-            .await?;
-        span.record("session", &session_id);
-
-        let (mut write, mut read) = ws_stream.split();
-
-        let payload = serde_json::to_vec(&BoardMessage::GameState(GameState {
-            level: backend_api::Level::L0,
-        }))
-        .unwrap();
-        write.send(Message::binary(payload)).await.unwrap();
-
-        while let Some(msg) = read.next().await {
-            tracing::debug!("{msg:?}");
+            let _ = ws_stream
+                .close(Some(CloseFrame {
+                    code: CloseCode::Invalid,
+                    reason: "Invalid Headers".into(),
+                }))
+                .await;
+            return Ok(());
         }
+    };
 
-        if let Err(err) = state.end_ws_session(&session_id).await {
-            tracing::warn!(err = &*err, "failed to store end of ws session");
-        }
+    let session_id = state
+        .start_ws_session(ws_headers.client_ip.unwrap_or_else(|| peer.ip()))
+        .await?;
+    span.record("session", &session_id);
 
-        Ok(())
+    if let Err(err) = board::serve(state.clone(), ws_stream).await {
+        tracing::error!(err = &*err, "error while serving board");
     }
 
-    tokio::spawn(
-        inner(state, stream)
-            .inspect_err(|err| tracing::error!(err = &**err, "connection error"))
-            .instrument(tracing::info_span!(
-                "connection",
-                session = tracing::field::Empty
-            )),
-    );
+    if let Err(err) = state.end_ws_session(&session_id).await {
+        tracing::warn!(err = &*err, "failed to store end of ws session");
+    }
+
+    Ok(())
 }
 
 #[derive(Default)]
