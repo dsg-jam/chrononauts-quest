@@ -1,8 +1,13 @@
+use std::net::IpAddr;
+use std::str::FromStr;
+
 use anyhow::Context;
 use backend_api::{BoardMessage, GameState};
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::tungstenite::handshake::server::Request;
+use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::Instrument;
 
@@ -38,12 +43,34 @@ fn accept_connection(state: State, stream: TcpStream) {
         let peer = stream.peer_addr().context("missing peer addr")?;
         let span = tracing::Span::current();
 
-        tracing::debug!(%peer, "accepting websocket connection");
+        tracing::trace!("accepting websocket connection");
+        let mut ws_headers = None;
+        let mut ws_stream =
+            tokio_tungstenite::accept_hdr_async(stream, |req: &Request, response| {
+                ws_headers = Some(WsHeaders::extract(req));
+                Ok(response)
+            })
+            .await?;
 
-        let ws_stream =
-            tokio_tungstenite::accept_hdr_async(stream, |_req: &Request, response| Ok(response))
-                .await?;
-        let session_id = state.start_ws_session(peer.ip()).await?;
+        let ws_headers = match ws_headers {
+            Some(Ok(v)) => v,
+            other => {
+                if let Some(Err(err)) = other {
+                    tracing::warn!(err = &*err, "dropping connection due to invalid headers");
+                }
+                let _ = ws_stream
+                    .close(Some(CloseFrame {
+                        code: CloseCode::Invalid,
+                        reason: "Invalid Headers".into(),
+                    }))
+                    .await;
+                return Ok(());
+            }
+        };
+
+        let session_id = state
+            .start_ws_session(ws_headers.client_ip.unwrap_or_else(|| peer.ip()))
+            .await?;
         span.record("session", &session_id);
 
         let (mut write, mut read) = ws_stream.split();
@@ -73,4 +100,33 @@ fn accept_connection(state: State, stream: TcpStream) {
                 session = tracing::field::Empty
             )),
     );
+}
+
+#[derive(Default)]
+struct WsHeaders {
+    client_ip: Option<IpAddr>,
+}
+
+impl WsHeaders {
+    fn extract(req: &Request) -> anyhow::Result<Self> {
+        let mut this = Self::default();
+        this.update_from_request(req)?;
+        Ok(this)
+    }
+
+    fn update_from_request(&mut self, req: &Request) -> anyhow::Result<()> {
+        let headers = req.headers();
+        // See: <https://cloud.google.com/load-balancing/docs/https/#x-forwarded-for_header>
+        if let Some(header) = headers.get("X-Forwarded-For") {
+            let mut visit = || -> anyhow::Result<()> {
+                let mut ips = header.to_str()?.split(',').rev().map(IpAddr::from_str);
+                let _load_balancer_ip = ips.next().context("missing load-balancer-ip")??;
+                let client_ip = ips.next().context("missing client-ip")??;
+                self.client_ip = Some(client_ip);
+                Ok(())
+            };
+            visit().context("invalid X-Forwarded-For header")?;
+        }
+        Ok(())
+    }
 }
