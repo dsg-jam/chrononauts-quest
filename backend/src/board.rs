@@ -62,6 +62,7 @@ impl BoardSocket {
                 Err(err) => Some(Err(anyhow::Error::from(err))),
                 Ok(msg) => {
                     if !(msg.is_binary() || msg.is_text()) {
+                        tracing::trace!(?msg, "ignoring non-payload message");
                         return None;
                     }
                     let msg = serde_json::from_slice::<BoardMessage>(&msg.into_data());
