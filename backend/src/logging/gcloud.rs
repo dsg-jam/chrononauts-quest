@@ -37,6 +37,8 @@ where
             event.record(&mut visitor);
             ser = visitor.take_serializer()?;
 
+            ser.serialize_entry("logging.googleapis.com/labels", &LabelAdapter(&meta))?;
+
             ser.serialize_entry(
                 "logging.googleapis.com/sourceLocation",
                 &SourceLocationAdapter(&meta),
@@ -46,7 +48,10 @@ where
                 .and_then(|id| ctx.span(id))
                 .or_else(|| ctx.lookup_current());
             if let Some(span) = current_span {
-                ser.serialize_entry("logging.googleapis.com/spanId", &span.id().into_u64())?;
+                ser.serialize_entry(
+                    "logging.googleapis.com/spanId",
+                    &SerdeDisplayAdapter(span.id().into_u64()),
+                )?;
             }
 
             ser.end()
@@ -83,6 +88,22 @@ impl<'a> serde::Serialize for SourceLocationAdapter<'a> {
         if let Some(line) = meta.line() {
             ser.serialize_entry("line", &SerdeDisplayAdapter(line))?;
         }
+
+        ser.end()
+    }
+}
+
+struct LabelAdapter<'a>(&'a Metadata<'a>);
+
+impl<'a> serde::Serialize for LabelAdapter<'a> {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let meta = &self.0;
+        let mut ser = ser.serialize_map(None)?;
+
+        ser.serialize_entry("log_target", meta.target())?;
 
         ser.end()
     }
