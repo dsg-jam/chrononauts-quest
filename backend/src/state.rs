@@ -6,17 +6,21 @@ use firestore::{paths, FirestoreDb, FirestoreReference};
 mod labyrinth;
 
 #[derive(Clone)]
-pub struct State {
+pub struct StateHandle {
     db: FirestoreDb,
 }
 
-impl State {
+impl StateHandle {
     pub async fn new() -> anyhow::Result<Self> {
         let db = FirestoreDb::new(crate::consts::PROJECT_ID).await?;
         Ok(Self { db })
     }
 
-    pub async fn start_ws_session(&self, peer_ip: IpAddr) -> anyhow::Result<String> {
+    pub async fn start_ws_session(
+        &self,
+        kind: WsSessionKind,
+        client_ip: IpAddr,
+    ) -> anyhow::Result<String> {
         let obj: WsSession = self
             .db
             .fluent()
@@ -26,7 +30,8 @@ impl State {
             .return_only_fields([] as [&str; 0])
             .object(&WsSession {
                 started_at: Some(Utc::now()),
-                peer_ip: Some(peer_ip),
+                kind: Some(kind),
+                client_ip: Some(client_ip),
                 ..Default::default()
             })
             .execute()
@@ -68,7 +73,24 @@ struct WsSession {
     #[serde(default, with = "firestore::serialize_as_optional_timestamp")]
     ended_at: Option<DateTime<Utc>>,
     #[serde(default)]
-    peer_ip: Option<IpAddr>,
+    kind: Option<WsSessionKind>,
+    #[serde(default)]
+    client_ip: Option<IpAddr>,
+}
+
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+pub enum WsSessionKind {
+    Board,
+    Website,
+}
+
+impl WsSessionKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Board => "board",
+            Self::Website => "website",
+        }
+    }
 }
 
 impl WsSession {

@@ -1,52 +1,35 @@
 use std::pin::pin;
 
+use crate::state::StateHandle;
+
+use super::WebSocketStream;
 use anyhow::Context;
 use backend_api::{BoardMessage, GameState};
 use futures::{SinkExt, StreamExt};
-use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::WebSocketStream;
 
-use crate::State;
-
-pub async fn serve(_state: State, ws_stream: WebSocketStream<TcpStream>) -> anyhow::Result<()> {
-    let mut board_socket = BoardSocket::new(ws_stream);
-    board_socket
+pub async fn serve(_state: StateHandle, ws_stream: &mut WebSocketStream) -> anyhow::Result<()> {
+    ws_stream
         .send_game_state(GameState {
             level: backend_api::Level::L0,
         })
         .await
         .context("failed to send initial game state")?;
 
-    while let Some(msg) = board_socket.recv().await {
+    while let Some(msg) = ws_stream.recv_board_msg().await {
         tracing::debug!("{msg:?}");
     }
 
     Ok(())
 }
 
-struct BoardSocket {
-    ws_stream: WebSocketStream<TcpStream>,
-}
-
-impl BoardSocket {
-    fn new(ws_stream: WebSocketStream<TcpStream>) -> Self {
-        Self { ws_stream }
-    }
-
+trait BoardStream {
     async fn send_game_state(&mut self, state: GameState) -> anyhow::Result<()> {
-        self.send(&BoardMessage::GameState(state)).await
+        self.send_board_msg(&BoardMessage::GameState(state)).await
     }
-
-    async fn send(&mut self, msg: &BoardMessage) -> anyhow::Result<()> {
-        let payload = serde_json::to_vec(msg)?;
-        self.ws_stream.send(Message::Binary(payload)).await?;
-        Ok(())
-    }
-
-    async fn recv(&mut self) -> Option<BoardMessage> {
+    async fn recv_board_msg(&mut self) -> Option<BoardMessage> {
         loop {
-            match self.try_recv().await {
+            match self.try_recv_board_msg().await {
                 Some(Ok(msg)) => return Some(msg),
                 None => return None,
                 Some(Err(err)) => {
@@ -56,8 +39,19 @@ impl BoardSocket {
         }
     }
 
-    async fn try_recv(&mut self) -> Option<anyhow::Result<BoardMessage>> {
-        let read = self.ws_stream.by_ref().filter_map(|msg| async move {
+    async fn send_board_msg(&mut self, msg: &BoardMessage) -> anyhow::Result<()>;
+    async fn try_recv_board_msg(&mut self) -> Option<anyhow::Result<BoardMessage>>;
+}
+
+impl BoardStream for WebSocketStream {
+    async fn send_board_msg(&mut self, msg: &BoardMessage) -> anyhow::Result<()> {
+        let payload = serde_json::to_vec(msg)?;
+        self.send(Message::Binary(payload)).await?;
+        Ok(())
+    }
+
+    async fn try_recv_board_msg(&mut self) -> Option<anyhow::Result<BoardMessage>> {
+        let read = self.by_ref().filter_map(|msg| async move {
             match msg {
                 Err(err) => Some(Err(anyhow::Error::from(err))),
                 Ok(msg) => {

@@ -1,16 +1,27 @@
 use std::io::Write;
 use std::pin::pin;
 
-use backend_api::{BoardMessage, DeviceId, Direction, LabyrinthAction};
+use backend_api::labyrinth::{Action, DeviceId, Direction};
+use backend_api::BoardMessage;
 use futures::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_tungstenite::tungstenite::Message;
 
+// don't want to hardcode the password here and also don't wanna turn the backend into a library.
+#[allow(unused)]
+#[path = "../src/consts.rs"]
+mod consts;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let url = std::env::args().skip(1).next();
+    let url = std::env::args().nth(1);
     let url = url.as_deref().unwrap_or("wss://api.chrononauts.quest");
+    if !url.starts_with("ws://") && !url.starts_with("wss://") {
+        anyhow::bail!("url must start with ws:// or wss://");
+    }
+
+    let url = format!("{url}/board?password={}", consts::BOARD_PASSWORD);
 
     println!("connecting to: {url}");
     let (ws_stream, _) = tokio_tungstenite::connect_async(url).await?;
@@ -64,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
             Event::InputLine(line) => match line.trim() {
                 "up" => {
                     write
-                        .send(BoardMessage::LabyrinthAction(LabyrinthAction {
+                        .send(BoardMessage::LabyrinthAction(Action {
                             device: DeviceId::Player1,
                             direction: Direction::Up,
                             step: true,
