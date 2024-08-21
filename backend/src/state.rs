@@ -1,9 +1,19 @@
 use std::net::IpAddr;
 
-use chrono::{DateTime, Utc};
-use firestore::{paths, FirestoreDb, FirestoreReference};
+pub use self::game::Game;
+use self::global::Global;
+use self::ws_session::WsSession;
+pub use self::ws_session::WsSessionKind;
+use firestore::{FirestoreDb, FirestoreListenerTarget, FirestoreReference, FirestoreResult};
+use futures::Stream;
 
+mod game;
+mod global;
 mod labyrinth;
+mod ws_session;
+
+// listeners are defined here to ensure they are unique across the entire application
+const GAME_LISTENER: FirestoreListenerTarget = FirestoreListenerTarget::new(17_u32);
 
 #[derive(Clone)]
 pub struct StateHandle {
@@ -20,93 +30,42 @@ impl StateHandle {
         &self,
         kind: WsSessionKind,
         client_ip: IpAddr,
-    ) -> anyhow::Result<String> {
-        let obj: WsSession = self
-            .db
-            .fluent()
-            .insert()
-            .into(WsSession::COLLECTION)
-            .generate_document_id()
-            .return_only_fields([] as [&str; 0])
-            .object(&WsSession {
-                started_at: Some(Utc::now()),
-                kind: Some(kind),
-                client_ip: Some(client_ip),
-                ..Default::default()
-            })
-            .execute()
-            .await?;
-        Ok(obj.id.unwrap())
+    ) -> FirestoreResult<String> {
+        WsSession::start(&self.db, kind, client_ip).await
     }
 
-    pub async fn end_ws_session(&self, session_id: &str) -> anyhow::Result<()> {
-        let _obj: WsSession = self
-            .db
-            .fluent()
-            .update()
-            .fields(paths!(WsSession::{ended_at}))
-            .in_col(WsSession::COLLECTION)
-            .return_only_fields([] as [&str; 0])
-            .document_id(session_id)
-            .object(&WsSession {
-                ended_at: Some(Utc::now()),
-                ..Default::default()
-            })
-            .execute()
-            .await?;
-        Ok(())
+    pub async fn end_ws_session(&self, session_id: &str) -> FirestoreResult<()> {
+        WsSession::end(&self.db, session_id).await
     }
-}
 
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
-struct Global {
-    #[serde(default)]
-    active_game: Option<FirestoreReference>,
-}
-
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
-struct WsSession {
-    #[serde(alias = "_firestore_id")]
-    id: Option<String>,
-    #[serde(default, with = "firestore::serialize_as_optional_timestamp")]
-    started_at: Option<DateTime<Utc>>,
-    #[serde(default, with = "firestore::serialize_as_optional_timestamp")]
-    ended_at: Option<DateTime<Utc>>,
-    #[serde(default)]
-    kind: Option<WsSessionKind>,
-    #[serde(default)]
-    client_ip: Option<IpAddr>,
-}
-
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
-pub enum WsSessionKind {
-    Board,
-    Website,
-}
-
-impl WsSessionKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Board => "board",
-            Self::Website => "website",
-        }
+    pub async fn get_active_game(&self) -> FirestoreResult<FirestoreReference> {
+        Global::get_active_game(&self.db).await
     }
-}
 
-impl WsSession {
-    const COLLECTION: &str = "ws-sessions";
-}
+    pub async fn stream_game(
+        &self,
+        game_ref: &FirestoreReference,
+    ) -> FirestoreResult<impl Stream<Item = Game>> {
+        Game::stream(&self.db, game_ref).await
+    }
 
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
-struct Game {
-    #[serde(alias = "_firestore_id")]
-    id: Option<String>,
-    #[serde(default, with = "firestore::serialize_as_optional_timestamp")]
-    started_at: Option<DateTime<Utc>>,
-    #[serde(default, with = "firestore::serialize_as_optional_timestamp")]
-    ended_at: Option<DateTime<Utc>>,
-}
+    pub async fn complete_l0(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
+        Game::complete_l0(&self.db, game_ref).await
+    }
 
-impl Game {
-    const _COLLECTION: &str = "games";
+    pub async fn complete_l1(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
+        Game::complete_l1(&self.db, game_ref).await
+    }
+
+    pub async fn complete_l2(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
+        Game::complete_l2(&self.db, game_ref).await
+    }
+
+    pub async fn complete_l3(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
+        Game::complete_l3(&self.db, game_ref).await
+    }
+
+    pub async fn _complete_l4(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
+        Game::complete_l4(&self.db, game_ref).await
+    }
 }

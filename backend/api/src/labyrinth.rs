@@ -1,12 +1,6 @@
 //! Labyrinth level types.
 
-#[cfg(feature = "shared")]
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum DeviceId {
-    Player1,
-    Player2,
-}
+use crate::DeviceId;
 
 #[cfg(feature = "shared")]
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
@@ -18,6 +12,7 @@ pub enum Direction {
     Right,
 }
 
+/// See [`BoardMessage::LabyrinthAction`](crate::BoardMessage::LabyrinthAction).
 #[cfg(feature = "board")]
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Action {
@@ -29,6 +24,7 @@ pub struct Action {
     pub step: bool,
 }
 
+/// See [`WebMessage::LabyrinthState`](crate::WebMessage::LabyrinthState).
 #[cfg(feature = "website")]
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct FullState {

@@ -1,4 +1,4 @@
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 
 use anyhow::Context;
@@ -20,7 +20,7 @@ const SESSION_FIELD: &str = "session";
 const KIND_FIELD: &str = "kind";
 
 pub async fn listen(state: StateHandle, port: u16) -> anyhow::Result<()> {
-    let listener = TcpListener::bind(("0.0.0.0", port)).await?;
+    let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, port)).await?;
     loop {
         match listener.accept().await {
             Ok((stream, _)) => {
@@ -65,7 +65,10 @@ async fn serve(state: StateHandle, stream: TcpStream) {
     let session_id = match state.start_ws_session(info.kind, info.client_ip).await {
         Ok(v) => v,
         Err(err) => {
-            tracing::error!(err = &*err, "failed to start ws session");
+            tracing::error!(
+                err = &err as &dyn std::error::Error,
+                "failed to start ws session"
+            );
             let _ = ws_stream
                 .close(Some(CloseFrame {
                     code: CloseCode::Error,
@@ -96,7 +99,10 @@ async fn serve(state: StateHandle, stream: TcpStream) {
 
     // track the end of the session
     if let Err(err) = state.end_ws_session(&session_id).await {
-        tracing::warn!(err = &*err, "failed to store end of ws session");
+        tracing::warn!(
+            err = &err as &dyn std::error::Error,
+            "failed to store end of ws session"
+        );
     }
 }
 

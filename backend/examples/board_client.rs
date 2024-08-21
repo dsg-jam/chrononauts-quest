@@ -1,30 +1,36 @@
 use std::io::Write;
 use std::pin::pin;
 
-use backend_api::labyrinth::{Action, DeviceId, Direction};
-use backend_api::BoardMessage;
+use backend_api::labyrinth::{Action, Direction};
+use backend_api::{BoardMessage, DeviceId};
 use futures::{SinkExt, StreamExt};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::WebSocketStream;
 
 // don't want to hardcode the password here and also don't wanna turn the backend into a library.
 #[allow(unused)]
 #[path = "../src/consts.rs"]
 mod consts;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn connect() -> anyhow::Result<WebSocketStream<impl AsyncRead + AsyncWrite + Unpin>> {
     let url = std::env::args().nth(1);
     let url = url.as_deref().unwrap_or("wss://api.chrononauts.quest");
     if !url.starts_with("ws://") && !url.starts_with("wss://") {
         anyhow::bail!("url must start with ws:// or wss://");
     }
-
     let url = format!("{url}/board?password={}", consts::BOARD_PASSWORD);
 
     println!("connecting to: {url}");
     let (ws_stream, _) = tokio_tungstenite::connect_async(url).await?;
+    Ok(ws_stream)
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let ws_stream = connect().await?;
     let (write, read) = ws_stream.split();
 
     let write = write

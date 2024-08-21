@@ -1,34 +1,71 @@
 use std::pin::pin;
 
-use anyhow::Context;
 use backend_api::{GameState, WebMessage};
 use futures::{SinkExt, StreamExt};
 use tokio_tungstenite::tungstenite::Message;
 
 use super::WebSocketStream;
-use crate::state::StateHandle;
+use crate::state::{Game, StateHandle};
 
-pub async fn serve(_state: StateHandle, ws_stream: &mut WebSocketStream) -> anyhow::Result<()> {
-    ws_stream
-        .send_game_state(GameState {
-            level: backend_api::Level::L0,
-        })
-        .await
-        .context("failed to send initial game state")?;
+pub async fn serve(state: StateHandle, ws_stream: &mut WebSocketStream) -> anyhow::Result<()> {
+    let game_ref = state.get_active_game().await?;
+    let mut game_stream = state.stream_game(&game_ref).await?;
 
-    while let Some(msg) = ws_stream.recv_board_msg().await {
-        tracing::debug!("{msg:?}");
+    let mut last_api_game = None;
+
+    loop {
+        let event = tokio::select! {
+            msg = ws_stream.recv_web_msg() => msg.map_or(Event::Stop, Event::Message),
+            game = game_stream.next() => game.map_or(Event::Stop, Event::Game),
+        };
+        match event {
+            Event::Message(WebMessage::EnterEncryptionKey { key }) => {
+                tracing::info!(key, "guessed encryption key");
+                if key == crate::consts::L3_ENCRYPTION_KEY {
+                    state.complete_l3(&game_ref).await?;
+                } else {
+                    ws_stream.send_encryption_key_rejected().await?;
+                }
+            }
+            Event::Message(msg) => {
+                tracing::warn!(?msg, "ignoring unexpected message");
+            }
+            Event::Game(game) => {
+                let api_game = game.to_api();
+                if Some(&api_game) != last_api_game.as_ref() {
+                    // api game state has changed, send it to the website
+                    last_api_game = Some(api_game.clone());
+                    ws_stream.send_game_state(api_game).await?;
+                }
+
+                if !game.l0_completed() {
+                    // the fact that we have a connection to the website means l0 is complete
+                    state.complete_l0(&game_ref).await?;
+                }
+            }
+            Event::Stop => break,
+        }
     }
-
+    tracing::warn!("stopping");
     Ok(())
 }
 
-trait WebsiteStream {
+enum Event {
+    Message(WebMessage),
+    Game(Game),
+    Stop,
+}
+
+trait WebMsgStream {
     async fn send_game_state(&mut self, state: GameState) -> anyhow::Result<()> {
         self.send_web_msg(&WebMessage::GameState(state)).await
     }
 
-    async fn recv_board_msg(&mut self) -> Option<WebMessage> {
+    async fn send_encryption_key_rejected(&mut self) -> anyhow::Result<()> {
+        self.send_web_msg(&WebMessage::EncryptionKeyRejected).await
+    }
+
+    async fn recv_web_msg(&mut self) -> Option<WebMessage> {
         loop {
             match self.try_recv_web_msg().await {
                 Some(Ok(msg)) => return Some(msg),
@@ -44,7 +81,7 @@ trait WebsiteStream {
     async fn try_recv_web_msg(&mut self) -> Option<anyhow::Result<WebMessage>>;
 }
 
-impl WebsiteStream for WebSocketStream {
+impl WebMsgStream for WebSocketStream {
     async fn send_web_msg(&mut self, msg: &WebMessage) -> anyhow::Result<()> {
         let payload = serde_json::to_vec(msg)?;
         self.send(Message::Binary(payload)).await?;
