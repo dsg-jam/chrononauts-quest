@@ -1,7 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 
-use anyhow::Context;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::tungstenite::handshake::server::Request;
@@ -185,21 +184,59 @@ impl ClientInfo {
             .ok_or_else(|| anyhow::format_err!("missing 'password' in query"))?
             .into_owned();
 
-        let headers = req.headers();
-        // See: <https://cloud.google.com/load-balancing/docs/https/#x-forwarded-for_header>
-        let client_ip = if let Some(value) = headers.get("X-Forwarded-For") {
-            tracing::trace!(?value, "parsing X-Forwarded-For header");
-            let mut ips = value.to_str()?.split(',').map(IpAddr::from_str);
-            ips.next()
-                .context("missing client-ip in X-Forwarded-For")??
-        } else {
-            peer.ip()
-        };
+        let forwarded_for = ips_from_header(req, "X-Forwarded-For")?;
+        let client_ip = forwarded_for
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| peer.ip());
 
         Ok(Self {
             client_ip,
             kind,
             password,
         })
+    }
+}
+
+fn ips_from_header(req: &Request, header: &str) -> anyhow::Result<Vec<IpAddr>> {
+    let mut ips = Vec::new();
+    for value in req.headers().get_all(header) {
+        let value = value.to_str()?;
+        let it = value.split(',').map(|s| IpAddr::from_str(s.trim()));
+        for ip in it {
+            let ip = ip?;
+            ips.push(ip);
+        }
+    }
+    Ok(ips)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::Ipv6Addr;
+
+    use super::*;
+
+    #[test]
+    fn ips_from_header_works() {
+        let req = Request::builder()
+            .header(
+                "X-Forwarded-For",
+                "203.0.113.195, 2001:db8:85a3:8d3:1319:8a2e:370:7348",
+            )
+            .header("X-Forwarded-For", "198.51.100.178")
+            .body(())
+            .unwrap();
+        let ips = ips_from_header(&req, "X-Forwarded-For").unwrap();
+        assert_eq!(
+            ips,
+            vec![
+                IpAddr::V4(Ipv4Addr::new(203, 0, 113, 195)),
+                IpAddr::V6(Ipv6Addr::new(
+                    0x2001, 0xdb8, 0x85a3, 0x8d3, 0x1319, 0x8a2e, 0x370, 0x7348
+                )),
+                IpAddr::V4(Ipv4Addr::new(198, 51, 100, 178)),
+            ]
+        );
     }
 }

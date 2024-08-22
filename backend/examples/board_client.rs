@@ -57,14 +57,16 @@ async fn main() -> anyhow::Result<()> {
     });
     let mut read = pin!(read);
 
+    let mut device = DeviceId::Player1;
     let mut input_lines = stream_input_lines();
-    print_prompt();
+    print_prompt(true);
     loop {
         let event = tokio::select! {
             msg = read.next() => msg.map(Event::Message).unwrap_or(Event::Stop),
             line = input_lines.next() => line.map(Event::InputLine).unwrap_or(Event::Stop),
         };
 
+        let mut show_help = false;
         match event {
             Event::Stop => {
                 println!();
@@ -79,29 +81,83 @@ async fn main() -> anyhow::Result<()> {
                 println!("ERROR: {err}");
             }
             Event::InputLine(line) => match line.trim() {
-                "up" => {
-                    write
-                        .send(BoardMessage::LabyrinthAction(Action {
-                            device: DeviceId::Player1,
-                            direction: Direction::Up,
-                            step: true,
-                        }))
-                        .await
-                        .unwrap();
+                "frequency_tuned" | "ft" => {
+                    write.send(BoardMessage::FrequencyTuned).await.unwrap();
+                }
+                "set_device player1" => {
+                    device = DeviceId::Player1;
+                }
+                "set_device player2" => {
+                    device = DeviceId::Player2;
                 }
                 _ => {
-                    println!("unrecognized command");
+                    if let Some(action) = parse_labyrinth_action(device, line.trim()) {
+                        write
+                            .send(BoardMessage::LabyrinthAction(action))
+                            .await
+                            .unwrap();
+                    } else {
+                        println!("unrecognized command");
+                        show_help = true;
+                    }
                 }
             },
         }
-        print_prompt();
+        print_prompt(show_help);
     }
 
     Ok(())
 }
 
-fn print_prompt() {
-    println!("commands: up");
+fn parse_labyrinth_action(device: DeviceId, cmd: &str) -> Option<Action> {
+    let long_form_cmd = match cmd {
+        "lu" => "look_up",
+        "ld" => "look_down",
+        "ll" => "look_left",
+        "lr" => "look_right",
+        "su" => "step_up",
+        "sd" => "step_down",
+        "sl" => "step_left",
+        "sr" => "step_right",
+        other => other,
+    };
+    let (action, direction) = long_form_cmd.split_once('_')?;
+    let step = match action {
+        "step" => true,
+        "look" => false,
+        _ => return None,
+    };
+    let direction = match direction {
+        "up" => Direction::Up,
+        "down" => Direction::Down,
+        "left" => Direction::Left,
+        "right" => Direction::Right,
+        _ => return None,
+    };
+    Some(Action {
+        device,
+        direction,
+        step,
+    })
+}
+
+fn print_prompt(show_help: bool) {
+    if show_help {
+        println!("Available commands:");
+        println!("  frequency_tuned|ft");
+        println!();
+        println!("Labyrinth:");
+        println!("  set_device <device>");
+        println!("  lu|look_up");
+        println!("  ld|look_down");
+        println!("  ll|look_left");
+        println!("  lr|look_right");
+        println!("  su|step_up");
+        println!("  sd|step_down");
+        println!("  sl|step_left");
+        println!("  sr|step_right");
+        println!();
+    }
     print!("> ");
     let _ = std::io::stdout().flush();
 }

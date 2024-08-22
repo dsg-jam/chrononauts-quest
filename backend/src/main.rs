@@ -33,6 +33,7 @@
 use self::state::StateHandle;
 
 mod consts;
+mod labyrinth;
 mod logging;
 mod server;
 mod state;

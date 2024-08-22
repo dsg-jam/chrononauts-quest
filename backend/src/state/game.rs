@@ -1,12 +1,13 @@
 use std::pin::Pin;
 
+use backend_api as api;
 use chrono::{DateTime, Utc};
 use firestore::struct_path::paths;
 use firestore::{
     FirestoreDb, FirestoreListenEvent, FirestoreListener, FirestoreMemListenStateStorage,
     FirestoreReference, FirestoreResult,
 };
-use futures::{Stream, StreamExt};
+use futures::{FutureExt, Stream, StreamExt};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -32,6 +33,16 @@ pub struct Game {
     l3_completed_at: Option<DateTime<Utc>>,
     #[serde(default, with = "firestore::serialize_as_optional_timestamp")]
     l4_completed_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    labyrinth: Labyrinth,
+}
+
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct Labyrinth {
+    #[serde(default)]
+    pub player1: Option<api::labyrinth::PlayerState>,
+    #[serde(default)]
+    pub player2: Option<api::labyrinth::PlayerState>,
 }
 
 impl Game {
@@ -55,7 +66,7 @@ impl Game {
         self.l4_completed_at.is_some()
     }
 
-    pub const fn determine_level(&self) -> backend_api::Level {
+    pub const fn determine_level(&self) -> api::Level {
         // this may seem a bit ridiculous compared to just using ifs, but we want to ensure that EVERY level is completed.
         // In other words, we want to return the first level that hasn't been completed.
         match (
@@ -65,19 +76,25 @@ impl Game {
             self.l3_completed(),
             self.l4_completed(),
         ) {
-            (true, true, true, true, true) => backend_api::Level::Finish,
-            (true, true, true, true, _) => backend_api::Level::L4,
-            (true, true, true, _, _) => backend_api::Level::L3,
-            (true, true, _, _, _) => backend_api::Level::L2,
-            (true, _, _, _, _) => backend_api::Level::L1,
-            (_, _, _, _, _) => backend_api::Level::L0,
+            (true, true, true, true, true) => api::Level::Finish,
+            (true, true, true, true, _) => api::Level::L4,
+            (true, true, true, _, _) => api::Level::L3,
+            (true, true, _, _, _) => api::Level::L2,
+            (true, _, _, _, _) => api::Level::L1,
+            (_, _, _, _, _) => api::Level::L0,
         }
     }
 
-    pub fn to_api(&self) -> backend_api::GameState {
-        backend_api::GameState {
+    pub fn state_to_api(&self) -> api::GameState {
+        api::GameState {
             level: self.determine_level(),
         }
+    }
+
+    pub fn labyrinth_to_api(&self) -> Option<api::labyrinth::FullState> {
+        let player1 = self.labyrinth.player1.clone()?;
+        let player2 = self.labyrinth.player2.clone()?;
+        Some(api::labyrinth::FullState { player1, player2 })
     }
 }
 
@@ -216,6 +233,83 @@ impl Game {
                 ..Default::default()
             },
         )
+        .await
+    }
+
+    fn mutate_on_labyrinth_action(&mut self, action: &api::labyrinth::Action) -> bool {
+        let player_state = {
+            // make sure both players are initialized
+            let p1 = self
+                .labyrinth
+                .player1
+                .get_or_insert(crate::labyrinth::PLAYER1_START_STATE);
+            let p2 = self
+                .labyrinth
+                .player2
+                .get_or_insert(crate::labyrinth::PLAYER2_START_STATE);
+            match action.device {
+                api::DeviceId::Player1 => p1,
+                api::DeviceId::Player2 => p2,
+            }
+        };
+        player_state.direction = action.direction;
+        if action.step {
+            let pos = &mut player_state.position;
+            match action.direction {
+                api::labyrinth::Direction::Up => {
+                    pos.y = pos.y.saturating_sub(1);
+                }
+                api::labyrinth::Direction::Down => {
+                    pos.y = pos.y.saturating_add(1);
+                }
+                api::labyrinth::Direction::Left => {
+                    pos.x = pos.x.saturating_sub(1);
+                }
+                api::labyrinth::Direction::Right => {
+                    pos.x = pos.x.saturating_add(1);
+                }
+            }
+        }
+        true
+    }
+
+    pub(super) async fn perform_labyrinth_action(
+        db: &FirestoreDb,
+        game_ref: &FirestoreReference,
+        action: api::labyrinth::Action,
+    ) -> FirestoreResult<bool> {
+        let (_, _, doc_id) = game_ref.split(db.get_documents_path());
+        db.run_transaction(move |db, transaction| {
+            let doc_id = doc_id.clone();
+            let action = action.clone();
+            async move {
+                let game: Option<Game> = db
+                    .fluent()
+                    .select()
+                    .fields(paths!(Game::{labyrinth}))
+                    .by_id_in(Game::COLLECTION)
+                    .obj()
+                    .one(doc_id.clone())
+                    .await?;
+                let Some(mut game) = game else {
+                    tracing::warn!("game not found");
+                    return Ok(false);
+                };
+                let success = game.mutate_on_labyrinth_action(&action);
+                if !success {
+                    return Ok(false);
+                }
+                db.fluent()
+                    .update()
+                    .fields(paths!(Game::{labyrinth}))
+                    .in_col(Game::COLLECTION)
+                    .document_id(doc_id)
+                    .object(&game)
+                    .add_to_transaction(transaction)?;
+                Ok(true)
+            }
+            .boxed()
+        })
         .await
     }
 

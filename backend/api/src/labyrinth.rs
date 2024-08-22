@@ -3,7 +3,7 @@
 use crate::DeviceId;
 
 #[cfg(feature = "shared")]
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Direction {
     Up,
@@ -26,14 +26,14 @@ pub struct Action {
 
 /// See [`WebMessage::LabyrinthState`](crate::WebMessage::LabyrinthState).
 #[cfg(feature = "website")]
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct FullState {
     pub player1: PlayerState,
     pub player2: PlayerState,
 }
 
 #[cfg(feature = "website")]
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PlayerState {
     /// The player's position on the board.
     pub position: Position,
@@ -42,7 +42,7 @@ pub struct PlayerState {
 }
 
 #[cfg(feature = "website")]
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Position {
     pub x: u8,
     pub y: u8,

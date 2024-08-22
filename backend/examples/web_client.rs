@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
                 Ok(Message::binary(payload))
             })
         });
-    let mut _write = pin!(write);
+    let mut write = pin!(write);
 
     let read = read.filter_map(|msg| async move {
         match msg {
@@ -57,13 +57,14 @@ async fn main() -> anyhow::Result<()> {
     let mut read = pin!(read);
 
     let mut input_lines = stream_input_lines();
-    print_prompt();
+    print_prompt(true);
     loop {
         let event = tokio::select! {
             msg = read.next() => msg.map(Event::Message).unwrap_or(Event::Stop),
             line = input_lines.next() => line.map(Event::InputLine).unwrap_or(Event::Stop),
         };
 
+        let mut show_help = false;
         match event {
             Event::Stop => {
                 println!();
@@ -77,20 +78,37 @@ async fn main() -> anyhow::Result<()> {
                 println!();
                 println!("ERROR: {err}");
             }
-            Event::InputLine(line) => match line.trim() {
-                _ => {
-                    println!("unrecognized command");
+            Event::InputLine(line) => {
+                let mut args = line.split_whitespace().map(|s| s.trim());
+                let arg = args.next();
+                match arg {
+                    Some("enter_encryption_key") => {
+                        let key = args.next().unwrap_or("");
+                        write
+                            .send(WebMessage::EnterEncryptionKey {
+                                key: key.to_string(),
+                            })
+                            .await?;
+                    }
+                    _ => {
+                        println!("unrecognized command");
+                        show_help = true;
+                    }
                 }
-            },
+            }
         }
-        print_prompt();
+        print_prompt(show_help);
     }
 
     Ok(())
 }
 
-fn print_prompt() {
-    println!("commands:");
+fn print_prompt(show_help: bool) {
+    if show_help {
+        println!("Available commands:");
+        println!("  enter_encryption_key <key>");
+        println!();
+    }
     print!("> ");
     let _ = std::io::stdout().flush();
 }

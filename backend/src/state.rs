@@ -4,12 +4,12 @@ pub use self::game::Game;
 use self::global::Global;
 use self::ws_session::WsSession;
 pub use self::ws_session::WsSessionKind;
+use backend_api as api;
 use firestore::{FirestoreDb, FirestoreListenerTarget, FirestoreReference, FirestoreResult};
 use futures::Stream;
 
 mod game;
 mod global;
-mod labyrinth;
 mod ws_session;
 
 // listeners are defined here to ensure they are unique across the entire application
@@ -63,6 +63,14 @@ impl StateHandle {
 
     pub async fn complete_l3(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
         Game::complete_l3(&self.db, game_ref).await
+    }
+
+    pub async fn perform_labyrinth_action(
+        &self,
+        game_ref: &FirestoreReference,
+        action: api::labyrinth::Action,
+    ) -> FirestoreResult<bool> {
+        Game::perform_labyrinth_action(&self.db, game_ref, action).await
     }
 
     pub async fn _complete_l4(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
