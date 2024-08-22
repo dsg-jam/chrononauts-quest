@@ -189,11 +189,7 @@ impl ClientInfo {
         // See: <https://cloud.google.com/load-balancing/docs/https/#x-forwarded-for_header>
         let client_ip = if let Some(value) = headers.get("X-Forwarded-For") {
             tracing::trace!(?value, "parsing X-Forwarded-For header");
-            let mut ips = value.to_str()?.split(',').rev().map(IpAddr::from_str);
-            let _load_balancer_ip = ips
-                .next()
-                .context("missing load-balancer-ip in X-Forwarded-For")??;
-
+            let mut ips = value.to_str()?.split(',').map(IpAddr::from_str);
             ips.next()
                 .context("missing client-ip in X-Forwarded-For")??
         } else {
