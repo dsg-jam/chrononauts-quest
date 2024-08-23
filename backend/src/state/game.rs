@@ -253,21 +253,25 @@ impl Game {
             }
         };
         player_state.direction = action.direction;
-        if action.step {
-            let pos = &mut player_state.position;
-            match action.direction {
-                api::labyrinth::Direction::Up => {
-                    pos.y = pos.y.saturating_sub(1);
-                }
-                api::labyrinth::Direction::Down => {
-                    pos.y = pos.y.saturating_add(1);
-                }
-                api::labyrinth::Direction::Left => {
-                    pos.x = pos.x.saturating_sub(1);
-                }
-                api::labyrinth::Direction::Right => {
-                    pos.x = pos.x.saturating_add(1);
-                }
+        if !action.step {
+            // if we don't want to move, we're done
+            return true;
+        }
+
+        // TODO reject moves that go out of bounds or collide with a wall
+        let pos = &mut player_state.position;
+        match action.direction {
+            api::labyrinth::Direction::Up => {
+                pos.y = pos.y.saturating_sub(1);
+            }
+            api::labyrinth::Direction::Down => {
+                pos.y = pos.y.saturating_add(1);
+            }
+            api::labyrinth::Direction::Left => {
+                pos.x = pos.x.saturating_sub(1);
+            }
+            api::labyrinth::Direction::Right => {
+                pos.x = pos.x.saturating_add(1);
             }
         }
         true
