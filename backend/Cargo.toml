@@ -1,0 +1,35 @@
+[package]
+name = "backend"
+version = "0.1.0"
+authors = [
+    "Simon Berger <simon@siku2.io>",
+    "Kevin Schaerer <kevin@schaerer.dev>",
+]
+edition = "2021"
+rust-version = "1.79"
+
+[dependencies]
+anyhow = "1"
+backend-api = { path = "api", features = ["board", "website"] }
+chrono = "0.4"
+firestore = "0.43"
+form_urlencoded = "1"
+futures = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+tokio-tungstenite = "0.23"
+tokio-util = "0.7"
+tracing = "0.1"
+tracing-log = "0.2"
+tracing-serde = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json"] }
+
+[dev-dependencies]
+# enable TLS support for examples
+tokio-tungstenite = { version = "0.23", features = ["rustls-tls-native-roots"] }
+
+[workspace]
+resolver = "2"
+members = ["api"]
