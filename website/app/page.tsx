@@ -1,13 +1,15 @@
 import styles from "./page.module.css";
-import { TerminalRenderer } from "@/components/terminal";
+import { Login } from "@/components/login";
+import { Terminal } from "@/components/terminal";
 
 // 1224 x 551
 
 export default function Home() {
   return (
     <main className={styles.main}>
-      <TerminalRenderer>
-        <p style={{ fontSize: "0.4em", fontFamily: "monospace" }}>
+      <Terminal>
+        <Login />
+        {/* <p style={{ fontSize: "0.4em", fontFamily: "monospace" }}>
           {`
  ▄████████    ▄█    █▄       ▄████████  ▄██████▄  ███▄▄▄▄    ▄██████▄  ███▄▄▄▄      ▄████████ ███    █▄      ███        ▄████████ 
 ███    ███   ███    ███     ███    ███ ███    ███ ███▀▀▀██▄ ███    ███ ███▀▀▀██▄   ███    ███ ███    ███ ▀█████████▄   ███    ███ 
@@ -22,8 +24,8 @@ export default function Home() {
         </p>
         <p>Hello World</p>
         <p>Enter Password:</p>
-        <p>---------------</p>
-      </TerminalRenderer>
+        <p>---------------</p> */}
+      </Terminal>
     </main>
   );
 }
