@@ -1,173 +1,85 @@
-use super::MAX_PACKET_SIZE;
+//! ChrononautsMessage
+//!
+//! This module contains the definition of the ChrononautsMessage enum, which is used to represent the messages that can be sent between the Chrononauts Boards
+//! Typically a ChrononautsMessage is sent over the radio module and thus wrapped in a ChrononautsPacket.
+//!
+//! The messages get serialized and deserialized into/from a binary format (`PostCard`) using the serde library.
+//!
+
+use backend_api::BoardMessage;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
 pub enum MessageError {
-    #[error("Missing opcode")]
-    MissingOpcode,
-    #[error("Invalid opcode")]
-    InvalidOpcode,
-    #[error("Invalid payload length")]
-    InvalidPayloadLength,
+    #[error("Invalid board message from backend")]
+    InvalidBoardMessageFromBackend,
 }
 
-pub trait ToBytes {
-    fn to_bytes(&self) -> heapless::Vec<u8, MAX_PACKET_SIZE>;
-}
-
-pub trait FromBytes {
-    fn from_bytes(value: &[u8]) -> Result<Self, MessageError>
-    where
-        Self: Sized;
-}
-
-/// ChrononautsPackage struct
-/// Represents a Chrononauts message, which is composed of a header and a payload.
+/// The source of the message.
 ///
-/// The package length is limited to 61 bytes, as the maximum packet size is 64 bytes,
-/// with 3 bytes reserved for the length and RSSI/LQI.
+/// This is used to determine where the message originated from, as we combine messages from the backend and the board.
+/// When a message arrives from the backend, the source MUST be set, when converting the message from a BoardMessage
+/// to a ChrononautsMessage.
 ///
-/// The package is structured as follows:
-/// Header (3 bytes) | Payload (max 58 bytes)
-///
-#[derive(Debug, Clone, Copy)]
-pub struct ChrononautsPackage {
-    pub header: ChrononautsHeader,
-    pub payload: ChrononautsPayload,
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
+pub enum MessageSource {
+    Backend,
+    Board,
 }
 
-impl ChrononautsPackage {
-    pub fn new(header: ChrononautsHeader, payload: ChrononautsPayload) -> Self {
-        ChrononautsPackage { header, payload }
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
+pub enum MessagePayload {
+    // This message is used to synchronize the game between two boards.
+    // This message is ALWAYS sent by the board connected to WiFi.
+    // The payload is the game level.
+    SyncRequest(backend_api::Level),
+    // This message is used to respond to a SyncRequest.
+    // This message is ALWAYS sent by the board NOT connected to WiFi.
+    // The payload is the game level (the same as from the request above).
+    SyncResponse(u8),
+    // If the board not connected to WiFi (accidentally) restarts, it will send this message to the other board.
+    // This message triggers the board connected to WiFi to send a SyncRequest.
+    RecoveryRequest,
+    /// This message is sent EITHER by the board connected to WiFi OR the backend.
+    ///
+    /// The payload is the game level that the board should set.
+    SetGameLevel(backend_api::Level),
+}
+
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
+pub struct ChrononautsMessage {
+    source: MessageSource,
+    payload: MessagePayload,
+}
+
+impl ChrononautsMessage {
+    pub fn new(source: MessageSource, payload: MessagePayload) -> Self {
+        Self { source, payload }
+    }
+
+    pub fn new_from_board(payload: MessagePayload) -> Self {
+        Self::new(MessageSource::Board, payload)
+    }
+
+    pub fn source(&self) -> MessageSource {
+        self.source
+    }
+
+    pub fn payload(&self) -> MessagePayload {
+        self.payload
     }
 }
 
-impl ToBytes for ChrononautsPackage {
-    fn to_bytes(&self) -> heapless::Vec<u8, MAX_PACKET_SIZE> {
-        let mut data = heapless::Vec::new();
-        data.extend(self.header.to_bytes());
-        data.extend(self.payload.to_bytes());
-        data
-    }
-}
+impl TryFrom<BoardMessage> for ChrononautsMessage {
+    type Error = MessageError;
 
-impl FromBytes for ChrononautsPackage {
-    fn from_bytes(value: &[u8]) -> Result<Self, MessageError> {
-        if value.len() < 3 {
-            return Err(MessageError::InvalidPayloadLength);
+    fn try_from(board_msg: BoardMessage) -> Result<Self, Self::Error> {
+        match board_msg {
+            BoardMessage::GameState(game_state) => Ok(Self::new(
+                MessageSource::Backend,
+                MessagePayload::SetGameLevel(game_state.level),
+            )),
+            _ => Err(MessageError::InvalidBoardMessageFromBackend),
         }
-        let header = ChrononautsHeader::from_bytes(&value[..3])?;
-        let payload = ChrononautsPayload::from_bytes(&value[3..])?;
-        Ok(ChrononautsPackage { header, payload })
-    }
-}
-
-/// ChrononautsHeader struct
-/// Represents the header of a Chrononauts message.
-///
-/// The header is composed of 3 bytes:
-/// - Source (1 byte)
-/// - Destination (1 byte)
-/// - Payload length (1 byte)
-///
-#[derive(Debug, Clone, Copy)]
-pub struct ChrononautsHeader {
-    pub source: u8,
-    pub destination: u8,
-    pub payload_length: u8,
-}
-
-impl ChrononautsHeader {
-    pub fn new(source: u8, destination: u8, payload_length: u8) -> Self {
-        ChrononautsHeader {
-            source,
-            destination,
-            payload_length,
-        }
-    }
-}
-
-impl ToBytes for ChrononautsHeader {
-    fn to_bytes(&self) -> heapless::Vec<u8, MAX_PACKET_SIZE> {
-        let mut data = heapless::Vec::new();
-        data.push(self.source).unwrap();
-        data.push(self.destination).unwrap();
-        data.push(self.payload_length).unwrap();
-        data
-    }
-}
-
-impl FromBytes for ChrononautsHeader {
-    fn from_bytes(value: &[u8]) -> Result<Self, MessageError> {
-        if value.len() < 3 {
-            return Err(MessageError::InvalidPayloadLength);
-        }
-        Ok(ChrononautsHeader {
-            source: value[0],
-            destination: value[1],
-            payload_length: value[2],
-        })
-    }
-}
-
-/// ChrononautsPayload enum
-/// Represents the payload of a Chrononauts message.
-///
-#[derive(Debug, Clone, Copy)]
-#[repr(u8)]
-pub enum ChrononautsPayload {
-    SyncRequest = 0x00,
-    SyncResponse = 0x01,
-    Ack = 0x02,
-    Nack = 0x03,
-    StartGame = 0x04,
-    EndGame = 0x05,
-    SetLevel(u8) = 0x06,
-}
-
-impl ChrononautsPayload {}
-
-impl From<ChrononautsPayload> for u8 {
-    fn from(value: ChrononautsPayload) -> u8 {
-        match value {
-            ChrononautsPayload::SyncRequest => 0x00,
-            ChrononautsPayload::SyncResponse => 0x01,
-            ChrononautsPayload::Ack => 0x02,
-            ChrononautsPayload::Nack => 0x03,
-            ChrononautsPayload::StartGame => 0x04,
-            ChrononautsPayload::EndGame => 0x05,
-            ChrononautsPayload::SetLevel(_) => 0x06,
-        }
-    }
-}
-
-impl ToBytes for ChrononautsPayload {
-    fn to_bytes(&self) -> heapless::Vec<u8, MAX_PACKET_SIZE> {
-        let mut data = heapless::Vec::new();
-        data.push((*self).into()).unwrap();
-        if let ChrononautsPayload::SetLevel(level) = self {
-            data.push(*level).unwrap();
-        }
-        data
-    }
-}
-
-impl FromBytes for ChrononautsPayload {
-    fn from_bytes(value: &[u8]) -> Result<Self, MessageError> {
-        let opcode = value.first().ok_or(MessageError::MissingOpcode)?;
-        Ok(match opcode {
-            0x00 => ChrononautsPayload::SyncRequest,
-            0x01 => ChrononautsPayload::SyncResponse,
-            0x02 => ChrononautsPayload::Ack,
-            0x03 => ChrononautsPayload::Nack,
-            0x04 => ChrononautsPayload::StartGame,
-            0x05 => ChrononautsPayload::EndGame,
-            0x06 => {
-                if value.len() < 2 {
-                    return Err(MessageError::InvalidPayloadLength);
-                }
-                ChrononautsPayload::SetLevel(value[1])
-            }
-            _ => return Err(MessageError::InvalidOpcode),
-        })
     }
 }

@@ -18,6 +18,7 @@ pub const IP_ADDRESS: Ipv4Addr = Ipv4Addr::new(10, 9, 1, 1);
 pub enum WifiRunner {
     ChangeWifi(WifiCreds),
     GetWifi,
+    ReconnectWifi,
 }
 
 #[derive(Debug)]
@@ -76,10 +77,29 @@ impl<'a> ChrononautsWifi<'a> {
         Ok(())
     }
 
+    fn has_saved_credentials(&self) -> bool {
+        if let Ok(conf) = self.wifi.get_configuration() {
+            if let Some(client_conf) = conf.as_client_conf_ref() {
+                if client_conf.ssid.len() > 0 && client_conf.password.len() > 0 {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     pub fn start(&mut self, update_pair: Arc<(Mutex<bool>, Condvar)>) -> Result<(), EspError> {
-        self.configure()?;
         self.wifi.start()?;
-        self.scan_for_available_ssids()?;
+
+        // Let's (attempt to) connect if we have saved credentials
+        if self.has_saved_credentials() {
+            log::info!("Connecting to Wi-Fi with saved credentials");
+            self.wifi.connect()?;
+        } else {
+            self.configure()?;
+        }
+
+        //self.scan_for_available_ssids()?;
         log::info!("Wi-Fi started");
 
         while let Ok(msg) = self.runner_rx.recv() {
@@ -109,6 +129,9 @@ impl<'a> ChrononautsWifi<'a> {
                     self.scan_for_available_ssids()?;
                     *wifi_update = true;
                     cvar.notify_one();
+                }
+                WifiRunner::ReconnectWifi => {
+                    self.wifi.connect()?;
                 }
             }
         }
