@@ -1,3 +1,5 @@
+use std::ffi::CStr;
+
 pub const WEBSOCKET_URI: &str = "wss://api.chrononauts.quest/board";
 
 pub const BOARD_PASSWORD: &str = "d81bc8c90e0ee8db";
@@ -50,11 +52,11 @@ pub const RADIO_FREQUENCY_HZ: u64 = 433_920_000;
 ///
 /// These are used to identify the events in the event loop. All events MUST have a unique ID.
 ///
-pub const MAIN_EVENT_BASE: &[u8] = b"MAIN_EVENT\0";
-pub const PACKET_RECEPTION_EVENT_BASE: &[u8] = b"PR_EVENT\0";
-pub const PACKET_TRANSMISSION_EVENT_BASE: &[u8] = b"PT_EVENT\0";
-pub const MESSAGE_TRANSMISSION_EVENT_BASE: &[u8] = b"MT_EVENT\0";
-pub const GAME_LOOP_EVENT_BASE: &[u8] = b"GL_EVENT\0";
+pub const MAIN_EVENT_BASE: &CStr = c"MAIN_EVENT";
+pub const PACKET_RECEPTION_EVENT_BASE: &CStr = c"PR_EVENT";
+pub const PACKET_TRANSMISSION_EVENT_BASE: &CStr = c"PT_EVENT";
+pub const MESSAGE_TRANSMISSION_EVENT_BASE: &CStr = c"MT_EVENT";
+pub const GAME_LOOP_EVENT_BASE: &CStr = c"GL_EVENT";
 
 pub const MAIN_EVENT_ID: i32 = 0;
 pub const PACKET_RECEPTION_EVENT_ID: i32 = 1;

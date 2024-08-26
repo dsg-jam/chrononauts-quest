@@ -4,8 +4,6 @@
 //! The message is then passed to the transportation layer for further processing.
 //!
 
-use std::ffi::CStr;
-
 use esp_idf_svc::eventloop::{
     EspEvent, EspEventDeserializer, EspEventPostData, EspEventSerializer, EspEventSource,
 };
@@ -20,7 +18,7 @@ pub enum MessageTransmissionEvent {
 
 unsafe impl EspEventSource for MessageTransmissionEvent {
     fn source() -> Option<&'static core::ffi::CStr> {
-        Some(CStr::from_bytes_with_nul(consts::MESSAGE_TRANSMISSION_EVENT_BASE).unwrap())
+        Some(consts::MESSAGE_TRANSMISSION_EVENT_BASE)
     }
 
     fn event_id() -> Option<i32> {

@@ -1,5 +1,3 @@
-use std::ffi::CStr;
-
 use esp_idf_svc::eventloop::{
     EspEvent, EspEventDeserializer, EspEventPostData, EspEventSerializer, EspEventSource,
 };
@@ -30,7 +28,7 @@ pub enum MainEvent {
 
 unsafe impl EspEventSource for MainEvent {
     fn source() -> Option<&'static core::ffi::CStr> {
-        Some(CStr::from_bytes_with_nul(consts::MAIN_EVENT_BASE).unwrap())
+        Some(consts::MAIN_EVENT_BASE)
     }
 
     fn event_id() -> Option<i32> {

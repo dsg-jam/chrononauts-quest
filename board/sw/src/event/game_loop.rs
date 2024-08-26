@@ -3,8 +3,6 @@
 //! This event is triggered when the game level changes.
 //!
 
-use std::ffi::CStr;
-
 use backend_api::Level;
 use esp_idf_svc::eventloop::{
     EspEvent, EspEventDeserializer, EspEventPostData, EspEventSerializer, EspEventSource,
@@ -22,7 +20,7 @@ pub enum GameLoopEvent {
 
 unsafe impl EspEventSource for GameLoopEvent {
     fn source() -> Option<&'static core::ffi::CStr> {
-        Some(CStr::from_bytes_with_nul(consts::GAME_LOOP_EVENT_BASE).unwrap())
+        Some(consts::GAME_LOOP_EVENT_BASE)
     }
 
     fn event_id() -> Option<i32> {
