@@ -27,7 +27,7 @@
 			],
 			"settings": {
 				"rust-analyzer.linkedProjects": [
-					"sw/chrononauts-board/Cargo.toml",
+					"board/sw/Cargo.toml",
 					"backend/Cargo.toml"
 				]
 			}
