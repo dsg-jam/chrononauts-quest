@@ -1,5 +1,4 @@
 use crate::captive::CaptivePortal;
-use backend_api::{labyrinth::Direction, Level};
 use consts::AP_IP_ADDRESS;
 use core::pin::pin;
 use dns::*;
@@ -22,18 +21,18 @@ use esp_idf_svc::{
     sys::{self, EspError},
     wifi::{AccessPointInfo, WifiDriver, WifiEvent},
 };
-use event::{GameLoopEvent, MainEvent, MessageTransmissionEvent, WsTransmissionEvent};
+use event::MainEvent;
+use game_loop::GameLoop;
 use http_server::ChrononautsHttpServer;
 use peripherals::{
     ChrononautsAccelerometer, ChrononautsLed, ChrononautsPotentiometer, PeripheralError,
 };
-use radio::{ChrononautsMessage, MessagePayload, MessageSource};
 use std::{
     sync::{mpsc, Arc, Mutex},
     thread::{self, sleep},
     time::Duration,
 };
-use utils::{ChrononautsId, DebounceButton};
+use utils::ChrononautsId;
 use wifi::{WifiCreds, WifiRunner};
 use ws::ChrononautsWebSocketClient;
 
@@ -41,6 +40,7 @@ mod captive;
 mod consts;
 mod dns;
 mod event;
+mod game_loop;
 mod http_server;
 mod peripherals;
 mod radio;
@@ -82,7 +82,7 @@ fn run() -> Result<(), ChrononautsError> {
     // # Init #
     // ########
     let chrononauts_id = utils::get_chrononauts_id()?;
-    log::debug!("Chrononauts ID: {:?}", chrononauts_id);
+    log::info!("Chrononauts ID: {:?}", chrononauts_id);
 
     let system_event_loop = EspSystemEventLoop::take()?;
     let chrononauts_event_loop = EspBackgroundEventLoop::new(&Default::default())?;
@@ -267,174 +267,6 @@ fn run() -> Result<(), ChrononautsError> {
     // ###########################
     // # Main event loop handler #
     // ###########################
-    let mut main_event_handler = MainEventLoop::new(chrononauts_event_loop, chrononauts_id);
+    let mut main_event_handler = GameLoop::new(chrononauts_event_loop, chrononauts_id);
     main_event_handler.run()
-}
-
-struct MainEventLoop {
-    chrononauts_event_loop: ChrononautsEventLoop,
-    chrononauts_id: ChrononautsId,
-    game_level: Level,
-    labyrinth_dir: Direction,
-    button: DebounceButton,
-}
-
-impl MainEventLoop {
-    fn new(chrononauts_event_loop: ChrononautsEventLoop, chrononauts_id: ChrononautsId) -> Self {
-        let button = DebounceButton::new();
-        Self {
-            chrononauts_event_loop,
-            game_level: Level::L0,
-            chrononauts_id,
-            labyrinth_dir: Direction::Up,
-            button,
-        }
-    }
-
-    fn handle_backend_message(&mut self, msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
-        if let MessagePayload::SetGameLevel(level) = msg.payload() {
-            self.game_level = level;
-            self.send_to_board(msg)?;
-        }
-        Ok(())
-    }
-
-    fn handle_board_message(&mut self, msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
-        match msg.payload() {
-            MessagePayload::SetGameLevel(level) => {
-                self.game_level = level;
-            }
-            MessagePayload::LabyrinthAction(_action) => {
-                if let Level::L4 = self.game_level {
-                    self.send_to_backend(msg)?;
-                }
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
-    fn handle_message(&mut self, msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
-        match msg.source() {
-            MessageSource::Backend => {
-                self.handle_backend_message(msg)?;
-            }
-            MessageSource::Board => {
-                self.handle_board_message(msg)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn send_message(&mut self, msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
-        if let ChrononautsId::L = self.chrononauts_id {
-            self.chrononauts_event_loop
-                .post::<WsTransmissionEvent>(&WsTransmissionEvent::Send(msg), delay::BLOCK)?;
-        } else {
-            self.chrononauts_event_loop
-                .post::<MessageTransmissionEvent>(
-                    &MessageTransmissionEvent::Message(msg),
-                    delay::BLOCK,
-                )?;
-        }
-        Ok(())
-    }
-
-    fn send_to_backend(&mut self, msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
-        self.chrononauts_event_loop
-            .post::<WsTransmissionEvent>(&WsTransmissionEvent::Send(msg), delay::BLOCK)?;
-        Ok(())
-    }
-
-    fn send_to_board(&mut self, mut msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
-        msg.change_source(MessageSource::Board);
-        self.chrononauts_event_loop
-            .post::<MessageTransmissionEvent>(
-                &MessageTransmissionEvent::Message(msg),
-                delay::BLOCK,
-            )?;
-        Ok(())
-    }
-
-    fn handle_button_press(&mut self) -> Result<(), ChrononautsError> {
-        match self.game_level {
-            Level::L2 => {
-                // Todo: Implement
-            }
-            Level::L3 => {
-                // Todo: Implement
-            }
-            Level::L4 => {
-                let message = ChrononautsMessage::new_from_board(MessagePayload::LabyrinthAction(
-                    backend_api::labyrinth::Action {
-                        device: self.chrononauts_id.into(),
-                        direction: self.labyrinth_dir,
-                        step: true,
-                    },
-                ));
-                self.send_message(message)?;
-            }
-            _ => {}
-        }
-
-        Ok(())
-    }
-
-    fn handle_accelerometer_direction(
-        &mut self,
-        direction: Direction,
-    ) -> Result<(), ChrononautsError> {
-        let Level::L4 = self.game_level else {
-            return Ok(());
-        };
-
-        self.labyrinth_dir = direction;
-
-        let message = ChrononautsMessage::new_from_board(MessagePayload::LabyrinthAction(
-            backend_api::labyrinth::Action {
-                device: self.chrononauts_id.into(),
-                direction,
-                step: false,
-            },
-        ));
-        self.send_message(message)?;
-        Ok(())
-    }
-
-    fn handle_event(&mut self, event: MainEvent) -> Result<(), ChrononautsError> {
-        match event {
-            MainEvent::ButtonChanged(state) => {
-                if self.button.debounce_button(state)? {
-                    self.handle_button_press()?;
-                }
-            }
-            MainEvent::WifiConnected => {
-                self.chrononauts_event_loop
-                    .post::<WsTransmissionEvent>(&WsTransmissionEvent::Connect, delay::BLOCK)?;
-            }
-            MainEvent::MessageReceived(msg) => self.handle_message(msg)?,
-            MainEvent::AccelerometerDirectionChanged(direction) => {
-                self.handle_accelerometer_direction(direction)?;
-            }
-            MainEvent::PotentiometerValueChanged(value) => {
-                self.chrononauts_event_loop
-                    .post::<GameLoopEvent>(&GameLoopEvent::SetLedBlinkSpeed(1, value), delay::BLOCK)
-                    .unwrap();
-            }
-        }
-        Ok(())
-    }
-
-    fn run(&mut self) -> Result<(), ChrononautsError> {
-        block_on(pin!(async move {
-            let mut subscription = self.chrononauts_event_loop.subscribe_async::<MainEvent>()?;
-
-            while let Ok(event) = subscription.recv().await {
-                self.handle_event(event)?;
-            }
-
-            // TODO: Handle error
-            Ok(())
-        }))
-    }
 }
