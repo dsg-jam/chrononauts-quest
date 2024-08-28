@@ -76,6 +76,10 @@ impl ChrononautsAccelerometer {
         block_on(pin!(async move {
             let mut async_timer = timer_service.timer_async()?;
             let mut last_direction = self.read_direction()?;
+            self.event_loop.post::<MainEvent>(
+                &MainEvent::AccelerometerDirectionChanged(last_direction),
+                BLOCK,
+            )?;
             loop {
                 async_timer
                     .after(Duration::from_millis(ACCEL_FETCH_INTERVAL_MS))

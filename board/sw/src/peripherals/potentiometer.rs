@@ -61,11 +61,10 @@ where
         let _game_loop_sub = {
             let game_level = game_level.clone();
             self.event_loop
-                .subscribe::<GameLoopEvent, _>(move |event| match event {
-                    GameLoopEvent::GameLevelChanged(level) => {
+                .subscribe::<GameLoopEvent, _>(move |event| {
+                    if let GameLoopEvent::GameLevelChanged(level) = event {
                         *game_level.lock().unwrap() = level;
                     }
-                    _ => {}
                 })
                 .unwrap()
         };
@@ -81,17 +80,11 @@ where
             let mut poti = AdcChannelDriver::new(&self.adc, adc_pin, &config).unwrap();
             loop {
                 let game_level = *game_level.lock().unwrap();
-                match game_level {
-                    Level::L2 => {
-                        let poti_value = self.adc.read(&mut poti).unwrap().saturating_add(100);
-                        self.event_loop
-                            .post::<MainEvent>(
-                                &MainEvent::PotentiometerValueChanged(poti_value),
-                                BLOCK,
-                            )
-                            .unwrap();
-                    }
-                    _ => {}
+                if game_level == Level::L2 {
+                    let poti_value = self.adc.read(&mut poti).unwrap().saturating_add(100);
+                    self.event_loop
+                        .post::<MainEvent>(&MainEvent::PotentiometerValueChanged(poti_value), BLOCK)
+                        .unwrap();
                 }
                 async_timer.after(Duration::from_millis(100)).await.unwrap();
             }
