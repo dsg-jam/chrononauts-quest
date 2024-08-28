@@ -4,11 +4,13 @@
 //!
 
 use core::time::Duration;
+use std::{pin::pin, thread};
 
 use backend_api::BoardMessage;
 use esp_idf_svc::{
-    hal::delay,
+    hal::{delay, task::block_on},
     io::EspIOError,
+    sys::EspError,
     tls::X509,
     ws::client::{
         EspWebSocketClient, EspWebSocketClientConfig, FrameType, WebSocketEvent, WebSocketEventType,
@@ -19,23 +21,26 @@ use log::info;
 
 use crate::{
     consts::{self, CNT_WS_PREFIX},
-    event::MainEvent,
-    radio::ChrononautsMessage,
+    event::{MainEvent, WsTransmissionEvent},
+    radio::{ChrononautsMessage, MessageError},
     ChrononautsEventLoop,
 };
 
-/// The relevant events for this example as it connects to the server,
-/// sends a message, receives the same message, and closes the connection.
-#[derive(Debug)]
-pub enum ChrononautsWsEvent {
-    Connected,
-    MessageReceived(BoardMessage),
-    Closed,
+#[derive(Debug, thiserror::Error)]
+pub enum WsError {
+    #[error(transparent)]
+    EspIOError(#[from] EspIOError),
+    #[error(transparent)]
+    EspError(#[from] EspError),
+    #[error(transparent)]
+    MessageError(#[from] MessageError),
+    #[error("WebSocket not connected")]
+    WsNotConnected,
 }
 
-pub struct ChrononautsWebSocketClient<'a>(EspWebSocketClient<'a>);
+pub struct ChrononautsWebSocketClient(EspWebSocketClient<'static>);
 
-impl<'a> ChrononautsWebSocketClient<'a> {
+impl ChrononautsWebSocketClient {
     pub fn new(event_loop: ChrononautsEventLoop) -> Self {
         let config = EspWebSocketClientConfig {
             server_cert: Some(X509::pem_until_nul(consts::SERVER_ROOT_CERT)),
@@ -58,11 +63,8 @@ impl<'a> ChrononautsWebSocketClient<'a> {
         self.0.is_connected()
     }
 
-    pub fn send_message(&mut self, message: &str) {
-        info!("Websocket send, text: {}", message);
-        self.0
-            .send(FrameType::Text(false), message.as_bytes())
-            .unwrap();
+    pub fn send_message(&mut self, payload: &[u8]) {
+        self.0.send(FrameType::Text(false), payload).unwrap();
     }
 }
 
@@ -115,4 +117,29 @@ fn handle_event(event_loop: ChrononautsEventLoop, event: &Result<WebSocketEvent,
             }
         }
     }
+}
+
+pub type WsHandler = thread::JoinHandle<Result<(), WsError>>;
+
+pub fn run(
+    mut ws_client: ChrononautsWebSocketClient,
+    event_loop: ChrononautsEventLoop,
+) -> Result<WsHandler, WsError> {
+    if !ws_client.is_connected() {
+        return Err(WsError::WsNotConnected);
+    }
+    let handler = thread::spawn(move || {
+        block_on(pin!(async move {
+            let mut subscription = event_loop.subscribe_async::<WsTransmissionEvent>()?;
+
+            loop {
+                let event = subscription.recv().await?;
+                let WsTransmissionEvent::Send(msg) = event;
+
+                let board_msg = BoardMessage::try_from(msg)?;
+                ws_client.send_message(&serde_json::to_vec(&board_msg).unwrap());
+            }
+        }))
+    });
+    Ok(handler)
 }

@@ -1,3 +1,4 @@
+use backend_api::labyrinth::Direction;
 use esp_idf_svc::eventloop::{
     EspEvent, EspEventDeserializer, EspEventPostData, EspEventSerializer, EspEventSource,
 };
@@ -6,11 +7,13 @@ mod game_loop;
 mod message_transmission;
 mod packet_reception;
 mod packet_transmission;
+mod ws_transmission;
 
 pub use game_loop::GameLoopEvent;
 pub use message_transmission::MessageTransmissionEvent;
 pub use packet_reception::PacketReceptionEvent;
 pub use packet_transmission::PacketTransmissionEvent;
+pub use ws_transmission::WsTransmissionEvent;
 
 use crate::{consts, radio::ChrononautsMessage};
 
@@ -24,6 +27,8 @@ pub enum MainEvent {
     MessageReceived(ChrononautsMessage),
     /// This event is issued by the wifi task when the wifi is (re)connected
     WifiConnected,
+    /// This event is issued by the accelrometer handler when the direction changes
+    AccelerometerDirectionChanged(Direction),
 }
 
 unsafe impl EspEventSource for MainEvent {

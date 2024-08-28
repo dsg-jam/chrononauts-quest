@@ -1,5 +1,6 @@
 use crate::captive::CaptivePortal;
 use backend_api::Level;
+use consts::AP_IP_ADDRESS;
 use core::pin::pin;
 use dns::*;
 use esp_idf_svc::{
@@ -9,8 +10,9 @@ use esp_idf_svc::{
             attenuation::DB_11,
             oneshot::{config::AdcChannelConfig, AdcChannelDriver, AdcDriver},
         },
-        delay,
+        delay::{self},
         gpio::{PinDriver, Pull},
+        i2c::{self, I2cDriver},
         prelude::Peripherals,
         spi::{
             config::{Config, DriverConfig},
@@ -18,7 +20,6 @@ use esp_idf_svc::{
         },
         task::block_on,
     },
-    http::server::Configuration,
     log::EspLogger,
     nvs::EspDefaultNvsPartition,
     sys::{self, EspError},
@@ -29,19 +30,22 @@ use event::{
     GameLoopEvent, MainEvent, MessageTransmissionEvent, PacketReceptionEvent,
     PacketTransmissionEvent,
 };
+use http_server::ChrononautsHttpServer;
 use radio::{ChrononautsMessage, ChrononautsPacket, MessagePayload, MessageSource};
 use std::{
-    sync::{mpsc, Arc, Condvar, Mutex},
+    sync::{mpsc, Arc, Mutex},
     thread::{self, sleep},
     time::Duration,
 };
-use wifi::{WifiCreds, WifiRunner, IP_ADDRESS};
+use wifi::{WifiCreds, WifiRunner};
+use ws::ChrononautsWebSocketClient;
+mod accelerometer;
 mod captive;
 mod consts;
 mod dns;
 mod event;
+mod http_server;
 mod radio;
-mod server;
 mod wifi;
 mod ws;
 
@@ -53,6 +57,10 @@ pub enum ChrononautsError {
     InvalidChrononautsId,
     #[error(transparent)]
     EspError(#[from] EspError),
+    #[error(transparent)]
+    AccelerometerError(#[from] accelerometer::AccelerometerError),
+    #[error(transparent)]
+    WsError(#[from] ws::WsError),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -90,6 +98,7 @@ impl TryFrom<u8> for ChrononautsId {
 }
 
 type ChrononautsEventLoop = EspEventLoop<User<Background>>;
+type ChrononautsSSIDs = Arc<Mutex<Vec<AccessPointInfo>>>;
 
 fn main() -> Result<(), ChrononautsError> {
     unsafe {
@@ -119,11 +128,11 @@ fn run() -> Result<(), ChrononautsError> {
 
     let peripherals = Peripherals::take()?;
     let (wifi_runner_tx, wifi_runner_rx) = mpsc::channel::<WifiRunner>();
-    let wifi_update_cond = Arc::new((Mutex::new(false), Condvar::new()));
 
     let pins = peripherals.pins;
 
-    let wifi_nets_store = Arc::new(Mutex::new(Vec::<AccessPointInfo>::new()));
+    let wifi_available_ssids: ChrononautsSSIDs =
+        Arc::new(Mutex::new(Vec::<AccessPointInfo>::new()));
 
     let spi_driver = SpiDriver::new(
         peripherals.spi2,
@@ -132,6 +141,13 @@ fn run() -> Result<(), ChrononautsError> {
         Some(pins.gpio2),
         &DriverConfig::default().dma(Dma::Auto(4096)),
     )?;
+
+    let i2c_config = i2c::config::Config {
+        sda_pullup_enabled: false,
+        scl_pullup_enabled: false,
+        ..Default::default()
+    };
+    let i2c_driver = I2cDriver::new(peripherals.i2c0, pins.gpio21, pins.gpio20, &i2c_config)?;
 
     let spi_device_driver =
         SpiDeviceDriver::new(spi_driver, Some(pins.gpio10), &Config::default())?;
@@ -156,13 +172,10 @@ fn run() -> Result<(), ChrononautsError> {
             system_event_loop.clone(),
             EspDefaultNvsPartition::take().ok(),
         )?;
-        let wifi_nets_store = wifi_nets_store.clone();
-        let wifi_update_cond = wifi_update_cond.clone();
+        let mut chrononauts_wifi =
+            wifi::ChrononautsWifi::new(wifi_driver, wifi_runner_rx, wifi_available_ssids.clone())?;
         Some(thread::spawn(move || {
-            let mut chrononauts_wifi =
-                wifi::ChrononautsWifi::new(wifi_driver, wifi_nets_store.clone(), wifi_runner_rx)
-                    .unwrap();
-            chrononauts_wifi.start(wifi_update_cond.clone()).unwrap();
+            chrononauts_wifi.run().unwrap();
         }))
     } else {
         None
@@ -170,7 +183,7 @@ fn run() -> Result<(), ChrononautsError> {
 
     let _dns_handler = if let ChrononautsId::L = chrononauts_id {
         log::info!("Starting DNS server...");
-        let mut dns = SimpleDns::try_new(IP_ADDRESS).expect("DNS server init failed");
+        let mut dns = SimpleDns::try_new(AP_IP_ADDRESS).expect("DNS server init failed");
         Some(thread::spawn(move || loop {
             dns.poll().ok();
             sleep(Duration::from_millis(50));
@@ -268,29 +281,20 @@ fn run() -> Result<(), ChrononautsError> {
     let _http_server_handler = if let ChrononautsId::L = chrononauts_id {
         let wifi_runner_tx = wifi_runner_tx.clone();
         log::info!("Starting HTTP server...");
-        let config = Configuration::default();
-        let mut server =
-            server::setup_server(&config, wifi_runner_tx, wifi_update_cond, wifi_nets_store)?;
+        let mut server = ChrononautsHttpServer::new(wifi_runner_tx, wifi_available_ssids);
+        server.setup().expect("HTTP server setup failed");
         log::info!("HTTP server started");
 
         log::info!("Attaching captive portal...");
-        CaptivePortal::attach(&mut server, IP_ADDRESS).expect("Captive portal attach failed");
+        CaptivePortal::attach(&mut server, AP_IP_ADDRESS).expect("Captive portal attach failed");
         Some(server)
     } else {
         None
     };
 
-    let (ws_start_tx, ws_start_rx) = mpsc::channel::<()>();
     let _ws_client_handler = if let ChrononautsId::L = chrononauts_id {
-        let chrononauts_event_loop = chrononauts_event_loop.clone();
-        Some(thread::spawn(move || {
-            ws_start_rx.recv().unwrap();
-            log::info!("Starting WebSocket client...");
-            ws::ChrononautsWebSocketClient::new(chrononauts_event_loop)
-            //assert_eq!(rx.recv(), Ok(ChrononautsWsEvent::Connected));
-            //assert!(ws_client.is_connected());
-            //ws_client.send_message("Hello, World!");
-        }))
+        let ws_client = ChrononautsWebSocketClient::new(chrononauts_event_loop.clone());
+        Some(ws::run(ws_client, chrononauts_event_loop.clone())?)
     } else {
         None
     };
@@ -325,11 +329,16 @@ fn run() -> Result<(), ChrononautsError> {
                 chrononauts_event_loop
                     .post::<MainEvent>(&MainEvent::WifiConnected, delay::NON_BLOCK)
                     .unwrap();
-                ws_start_tx.send(()).unwrap();
+                //ws_start_tx.send(()).unwrap();
             }
             WifiEvent::StaDisconnected(_) => {
                 log::info!("Wi-Fi disconnected - trying to reconnect");
                 wifi_runner_tx.send(WifiRunner::ReconnectWifi).unwrap();
+            }
+            WifiEvent::ScanDone(status) => {
+                if status.is_successful() {
+                    wifi_runner_tx.send(WifiRunner::ScanFinished).unwrap();
+                }
             }
             _ => {}
         })?
@@ -427,32 +436,9 @@ fn run() -> Result<(), ChrononautsError> {
         })
     };
 
-    // Game loop
-    let game_level = Arc::new((Mutex::new(Level::L1), Condvar::new()));
-    let _game_loop_handler = {
-        let chrononauts_event_loop = chrononauts_event_loop.clone();
-        let game_level = game_level.clone();
-        thread::spawn(move || {
-            let mut previous_level = *game_level.0.lock().unwrap();
-            loop {
-                let (lock, cvar) = &*(game_level.clone());
-                let mut current_level = lock.lock().unwrap();
-                while *current_level == previous_level {
-                    // this will block this thread until game game_level is changed
-                    current_level = cvar.wait(current_level).unwrap();
-                }
-                previous_level = *current_level;
-
-                log::info!("[GAME_LOOP]: Game level changed to {:?}", previous_level);
-                chrononauts_event_loop
-                    .post::<GameLoopEvent>(
-                        &GameLoopEvent::GameLevelChanged(*current_level),
-                        delay::BLOCK,
-                    )
-                    .unwrap();
-            }
-        })
-    };
+    // Accelerometer handler
+    let accelerometer = accelerometer::ChrononautsAccelerometer::new(i2c_driver);
+    let _acceleroemter_handler = accelerometer::run(accelerometer, chrononauts_event_loop.clone())?;
 
     // Register handlers for the event loop
     block_on(pin!(async move {
@@ -465,7 +451,7 @@ fn run() -> Result<(), ChrononautsError> {
         let mut button_state = true;
         let mut last_change_time = Duration::from_millis(0);
 
-        let (lock, cvar) = &*game_level;
+        let mut game_level = Level::L0;
 
         loop {
             let event = subscription.recv().await?;
@@ -488,10 +474,11 @@ fn run() -> Result<(), ChrononautsError> {
                     match msg.source() {
                         MessageSource::Backend => {
                             if let MessagePayload::SetGameLevel(level) = msg.payload() {
-                                log::info!("[MAIN_EVENT]: Received SetGameLevel from Backend");
-                                let mut game_level = lock.lock().unwrap();
-                                *game_level = level;
-                                cvar.notify_one();
+                                log::info!(
+                                    "[MAIN_EVENT]: Received SetGameLevel({level:?}) from Backend"
+                                );
+                                game_level = level;
+
                                 chrononauts_event_loop
                                     .post::<MessageTransmissionEvent>(
                                         &MessageTransmissionEvent::Message(
@@ -507,12 +494,19 @@ fn run() -> Result<(), ChrononautsError> {
                         MessageSource::Board => {
                             if let MessagePayload::SetGameLevel(level) = msg.payload() {
                                 log::info!("[MAIN_EVENT]: Received SetGameLevel from Wifi-Board");
-                                let mut game_level = lock.lock().unwrap();
-                                *game_level = level;
-                                cvar.notify_one();
+                                game_level = level;
                             }
                         }
                     }
+                }
+                MainEvent::AccelerometerDirectionChanged(direction) => {
+                    let Level::L4 = game_level else {
+                        continue;
+                    };
+
+                    // Handle the accelerometer direction change
+
+                    log::info!("Accelerometer direction changed: {:?}", direction);
                 }
             }
         }

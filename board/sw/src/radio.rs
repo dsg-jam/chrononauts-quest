@@ -11,7 +11,7 @@ mod transport;
 
 use cc1101::Error;
 use esp_idf_svc::hal::spi::SpiError;
-pub use message::{ChrononautsMessage, MessagePayload, MessageSource};
+pub use message::{ChrononautsMessage, MessageError, MessagePayload, MessageSource};
 pub use packet::ChrononautsPacket;
 use packet::PacketError;
 pub use transceiver::ChrononautsTransceiver;

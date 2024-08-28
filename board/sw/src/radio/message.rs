@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 pub enum MessageError {
     #[error("Invalid board message from backend")]
     InvalidBoardMessageFromBackend,
+    #[error("Invalid board message from board")]
+    InvalidBoardMessageFromBoard,
 }
 
 /// The source of the message.
@@ -44,6 +46,11 @@ pub enum MessagePayload {
     ///
     /// The payload is the game level that the board should set.
     SetGameLevel(backend_api::Level),
+    /// This message is sent EITHER by the board connected to WiFi OR the backend.
+    ///
+    /// The payload is the action to be performed in the labyrinth.
+    /// This message is only sent in [`Level::L4`].
+    LabyrinthAction(backend_api::labyrinth::Action),
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
@@ -80,6 +87,17 @@ impl TryFrom<BoardMessage> for ChrononautsMessage {
                 MessagePayload::SetGameLevel(game_state.level),
             )),
             _ => Err(MessageError::InvalidBoardMessageFromBackend),
+        }
+    }
+}
+
+impl TryFrom<ChrononautsMessage> for BoardMessage {
+    type Error = MessageError;
+
+    fn try_from(chrononauts_msg: ChrononautsMessage) -> Result<Self, Self::Error> {
+        match chrononauts_msg.payload {
+            MessagePayload::LabyrinthAction(action) => Ok(BoardMessage::LabyrinthAction(action)),
+            _ => Err(MessageError::InvalidBoardMessageFromBoard),
         }
     }
 }

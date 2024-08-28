@@ -4,6 +4,20 @@ var selected_ssid = "";
 function request_scan() {
     var url = "/scan";
     var xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+            console.log("Scan requested");
+        } else {
+            console.log("Scan request failed");
+        }
+    }
+    xhr.send();
+}
+
+function fetch_ssids() {
+    var url = "/ssids";
+    var xhr = new XMLHttpRequest();
     xhr.open("GET", url, true);
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4 && xhr.status == 200) {
@@ -19,4 +33,5 @@ function request_scan() {
 
 document.addEventListener("DOMContentLoaded", function(event) { 
     selected_ssid = ssid_select.getAttribute("value");
+    const _refresh_ssids_interval = setInterval(fetch_ssids, 2000);
 });
