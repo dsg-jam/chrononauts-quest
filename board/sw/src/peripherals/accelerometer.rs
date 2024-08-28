@@ -1,8 +1,4 @@
-use std::{
-    pin::pin,
-    thread::{self, JoinHandle},
-    time::Duration,
-};
+use std::{pin::pin, time::Duration};
 
 use backend_api::labyrinth::Direction;
 use esp_idf_svc::{
@@ -33,11 +29,15 @@ pub enum AccelerometerError {
 
 pub struct ChrononautsAccelerometer {
     i2c_driver: I2cDriver<'static>,
+    event_loop: ChrononautsEventLoop,
 }
 
 impl ChrononautsAccelerometer {
-    pub fn new(i2c_driver: I2cDriver<'static>) -> Self {
-        Self { i2c_driver }
+    pub fn new(i2c_driver: I2cDriver<'static>, event_loop: ChrononautsEventLoop) -> Self {
+        Self {
+            i2c_driver,
+            event_loop,
+        }
     }
 
     pub fn check_availability(&mut self) -> Result<(), AccelerometerError> {
@@ -68,35 +68,29 @@ impl ChrononautsAccelerometer {
 
         Ok(direction)
     }
-}
 
-pub type AccelerometerHandler = JoinHandle<Result<(), AccelerometerError>>;
+    pub fn run(&mut self) -> Result<(), AccelerometerError> {
+        self.check_availability()?;
 
-pub fn run(
-    mut accelerometer: ChrononautsAccelerometer,
-    event_loop: ChrononautsEventLoop,
-) -> Result<AccelerometerHandler, AccelerometerError> {
-    accelerometer.check_availability()?;
-    let timer_service = EspTaskTimerService::new()?;
-    let handler = thread::spawn(move || {
+        let timer_service = EspTaskTimerService::new()?;
         block_on(pin!(async move {
             let mut async_timer = timer_service.timer_async()?;
-            let mut last_direction = accelerometer.read_direction()?;
+            let mut last_direction = self.read_direction()?;
             loop {
                 async_timer
                     .after(Duration::from_millis(ACCEL_FETCH_INTERVAL_MS))
-                    .await?;
-                let direction = accelerometer.read_direction()?;
+                    .await
+                    .unwrap();
+                let direction = self.read_direction().unwrap();
                 if direction == last_direction {
                     continue;
                 }
                 last_direction = direction;
-                event_loop.post::<MainEvent>(
+                self.event_loop.post::<MainEvent>(
                     &MainEvent::AccelerometerDirectionChanged(direction),
                     BLOCK,
                 )?;
             }
         }))
-    });
-    Ok(handler)
+    }
 }

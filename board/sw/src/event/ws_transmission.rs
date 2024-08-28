@@ -13,6 +13,7 @@ use crate::{consts, radio::ChrononautsMessage};
 #[derive(Clone, Debug, Copy)]
 pub enum WsTransmissionEvent {
     Send(ChrononautsMessage),
+    Connect,
 }
 
 unsafe impl EspEventSource for WsTransmissionEvent {

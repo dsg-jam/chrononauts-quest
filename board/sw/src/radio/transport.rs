@@ -21,7 +21,7 @@ use std::{collections::VecDeque, time::Instant};
 
 use esp_idf_svc::hal::delay;
 
-use crate::{consts, event::PacketTransmissionEvent, ChrononautsEventLoop, ChrononautsId};
+use crate::{consts, event::PacketTransmissionEvent, utils::ChrononautsId, ChrononautsEventLoop};
 
 use super::{ChrononautsMessage, ChrononautsPacket};
 

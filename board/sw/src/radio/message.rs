@@ -68,6 +68,10 @@ impl ChrononautsMessage {
         Self::new(MessageSource::Board, payload)
     }
 
+    pub fn change_source(&mut self, source: MessageSource) {
+        self.source = source;
+    }
+
     pub fn source(&self) -> MessageSource {
         self.source
     }
