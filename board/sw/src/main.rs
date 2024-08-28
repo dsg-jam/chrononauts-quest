@@ -6,10 +6,7 @@ use dns::*;
 use esp_idf_svc::{
     eventloop::{Background, EspBackgroundEventLoop, EspEventLoop, EspSystemEventLoop, User},
     hal::{
-        adc::{
-            attenuation::DB_11,
-            oneshot::{config::AdcChannelConfig, AdcChannelDriver, AdcDriver},
-        },
+        adc::oneshot::AdcDriver,
         delay::{self},
         gpio::{PinDriver, Pull},
         i2c::{self, I2cDriver},
@@ -25,13 +22,12 @@ use esp_idf_svc::{
     sys::{self, EspError},
     wifi::{AccessPointInfo, WifiDriver, WifiEvent},
 };
-use event::{
-    GameLoopEvent, MainEvent, MessageTransmissionEvent, PacketReceptionEvent,
-    PacketTransmissionEvent, WsTransmissionEvent,
-};
+use event::{GameLoopEvent, MainEvent, MessageTransmissionEvent, WsTransmissionEvent};
 use http_server::ChrononautsHttpServer;
-use peripherals::{ChrononautsAccelerometer, PeripheralError};
-use radio::{ChrononautsMessage, ChrononautsPacket, MessagePayload, MessageSource};
+use peripherals::{
+    ChrononautsAccelerometer, ChrononautsLed, ChrononautsPotentiometer, PeripheralError,
+};
+use radio::{ChrononautsMessage, MessagePayload, MessageSource};
 use std::{
     sync::{mpsc, Arc, Mutex},
     thread::{self, sleep},
@@ -91,10 +87,9 @@ fn run() -> Result<(), ChrononautsError> {
     let chrononauts_event_loop = EspBackgroundEventLoop::new(&Default::default())?;
 
     let peripherals = Peripherals::take()?;
-    let (wifi_runner_tx, wifi_runner_rx) = mpsc::channel::<WifiRunner>();
-
     let pins = peripherals.pins;
-
+    
+    let (wifi_runner_tx, wifi_runner_rx) = mpsc::channel::<WifiRunner>();
     let wifi_available_ssids: ChrononautsSSIDs =
         Arc::new(Mutex::new(Vec::<AccessPointInfo>::new()));
 
@@ -117,15 +112,12 @@ fn run() -> Result<(), ChrononautsError> {
         SpiDeviceDriver::new(spi_driver, Some(pins.gpio10), &Config::default())?;
 
     let cc1101 = Cc1101::new(spi_device_driver).unwrap();
-    let mut radio_transceiver = radio::ChrononautsTransceiver::new(cc1101);
-    let mut radio_transport =
-        radio::ChrononautsTransport::new(chrononauts_event_loop.clone(), chrononauts_id);
 
     let mut push_button = PinDriver::input(pins.gpio9)?;
     push_button.set_pull(Pull::Up)?;
 
-    let mut led1 = PinDriver::output(pins.gpio3)?;
-    let mut led2 = PinDriver::output(pins.gpio1)?;
+    let led1 = PinDriver::output(pins.gpio3)?;
+    let led2 = PinDriver::output(pins.gpio1)?;
 
     let poti_adc = AdcDriver::new(peripherals.adc1)?;
 
@@ -163,100 +155,28 @@ fn run() -> Result<(), ChrononautsError> {
     // #############################
     // # Radio transceiver handler #
     // #############################
-    {
-        let chrononauts_event_loop = chrononauts_event_loop.clone();
-        thread::spawn(move || {
-            radio_transceiver.init().expect("Radio init failed");
-            let (packets_to_send_tx, packets_to_send_rx) = mpsc::channel::<ChrononautsPacket>();
-
-            let _packet_transmission_sub = chrononauts_event_loop
-                .subscribe::<PacketTransmissionEvent, _>(move |event| {
-                    let PacketTransmissionEvent::Packet(packet) = event;
-                    log::info!("Packet transmission event: {:?}", packet);
-                    packets_to_send_tx.send(packet).unwrap();
-                })
-                .unwrap();
-
-            loop {
-                if let Ok(packet) = radio_transceiver.get_packet() {
-                    if packet.matches_destination(chrononauts_id.into()) {
-                        chrononauts_event_loop
-                            .post::<PacketReceptionEvent>(
-                                &PacketReceptionEvent::Packet(packet),
-                                delay::BLOCK,
-                            )
-                            .unwrap();
-                    }
-                }
-
-                if let Ok(packet) = packets_to_send_rx.try_recv() {
-                    if radio_transceiver.send_packet(&packet).is_ok() {
-                        log::info!("Packet sent");
-                    }
-                }
-
-                sleep(Duration::from_millis(20));
-            }
-        });
-    }
+    let mut radio_transceiver =
+        radio::ChrononautsTransceiver::new(cc1101, chrononauts_event_loop.clone());
+    let _radio_transceiver_handler = thread::spawn(move || radio_transceiver.run(chrononauts_id));
 
     // ###########################
     // # Radio transport handler #
     // ###########################
-    let _radio_transport_handler = {
-        let chrononauts_event_loop = chrononauts_event_loop.clone();
-        thread::spawn(move || {
-            let (packets_to_process_tx, packets_to_process_rx) =
-                mpsc::channel::<ChrononautsPacket>();
-            let (messages_to_process_tx, messages_to_process_rx) =
-                mpsc::channel::<ChrononautsMessage>();
-
-            let _packet_reception_sub = chrononauts_event_loop
-                .subscribe::<PacketReceptionEvent, _>(move |event| {
-                    let PacketReceptionEvent::Packet(packet) = event;
-                    log::info!("Packet reception event: {:?}", packet);
-                    packets_to_process_tx.send(packet).unwrap();
-                })
-                .unwrap();
-
-            let _message_transmission_sub = chrononauts_event_loop
-                .subscribe::<MessageTransmissionEvent, _>(move |event| {
-                    let MessageTransmissionEvent::Message(message) = event;
-                    log::info!("Message transmission event: {:?}", message);
-                    messages_to_process_tx.send(message).unwrap();
-                })
-                .unwrap();
-
-            loop {
-                if let Ok(packet) = packets_to_process_rx.try_recv() {
-                    if let Ok(Some(message)) = radio_transport.handle_reception(packet) {
-                        chrononauts_event_loop
-                            .post::<MainEvent>(&MainEvent::MessageReceived(message), delay::BLOCK)
-                            .unwrap();
-                    };
-                }
-
-                if let Ok(message) = messages_to_process_rx.try_recv() {
-                    radio_transport.enqueue_message(message).unwrap();
-                }
-
-                let _ = radio_transport.handle_send();
-
-                sleep(Duration::from_millis(20));
-            }
-        })
-    };
+    let mut radio_transport =
+        radio::ChrononautsTransport::new(chrononauts_event_loop.clone(), chrononauts_id);
+    let _radio_transport_handler = { thread::spawn(move || radio_transport.run()) };
 
     // #######################
     // # HTTP server handler #
     // #######################
     let _http_server_handler = if let ChrononautsId::L = chrononauts_id {
-        let wifi_runner_tx = wifi_runner_tx.clone();
-        let mut server = ChrononautsHttpServer::new(wifi_runner_tx, wifi_available_ssids);
-        server.setup().expect("HTTP server setup failed");
+        let mut http_server =
+            ChrononautsHttpServer::new(wifi_runner_tx.clone(), wifi_available_ssids);
+        http_server.setup().expect("HTTP server setup failed");
 
-        CaptivePortal::attach(&mut server, AP_IP_ADDRESS).expect("Captive portal attach failed");
-        Some(server)
+        CaptivePortal::attach(&mut http_server, AP_IP_ADDRESS)
+            .expect("Captive portal attach failed");
+        Some(http_server)
     } else {
         None
     };
@@ -322,105 +242,26 @@ fn run() -> Result<(), ChrononautsError> {
     // #########################
     // # Potentiometer handler #
     // #########################
-    let _turning_knob_handler = {
-        let chrononauts_event_loop = chrononauts_event_loop.clone();
-        thread::spawn(move || {
-            let game_level = Arc::new(Mutex::new(Level::L0));
-            let config = AdcChannelConfig {
-                attenuation: DB_11,
-                calibration: true,
-                ..Default::default()
-            };
-            let mut poti = AdcChannelDriver::new(&poti_adc, pins.gpio0, &config).unwrap();
-            let _sub = {
-                let game_level = game_level.clone();
-                chrononauts_event_loop
-                    .subscribe::<GameLoopEvent, _>(move |event| {
-                        if let GameLoopEvent::GameLevelChanged(level) = event {
-                            *game_level.lock().unwrap() = level;
-                        }
-                    })
-                    .unwrap()
-            };
-
-            log::info!("[TURNING_KNOB]: Starting turning knob handler");
-            loop {
-                let game_level = *game_level.lock().unwrap();
-
-                if let Level::L2 = game_level {
-                    let poti_value = poti_adc.read(&mut poti).unwrap() + 100;
-                    chrononauts_event_loop
-                        .post::<GameLoopEvent>(
-                            &GameLoopEvent::SetLedBlinkSpeed(poti_value as u64),
-                            delay::BLOCK,
-                        )
-                        .unwrap();
-                }
-                sleep(Duration::from_millis(100));
-            }
-        })
-    };
+    let mut potentiometer = ChrononautsPotentiometer::new(poti_adc, chrononauts_event_loop.clone())
+        .expect("Potentiometer init failed");
+    let _turning_knob_handler = { thread::spawn(move || potentiometer.run(pins.gpio0)) };
 
     // ################
     // # LEDs handler #
     // ################
-    let _led_handler = {
-        let chrononauts_event_loop = chrononauts_event_loop.clone();
-        thread::spawn(move || {
-            let game_level = Arc::new(Mutex::new(Level::L0));
-            let blink_speed = Arc::new(Mutex::new(None));
-            let _game_loop_sub = {
-                let game_level = game_level.clone();
-                let blink_speed = blink_speed.clone();
-                chrononauts_event_loop
-                    .subscribe::<GameLoopEvent, _>(move |event| match event {
-                        GameLoopEvent::GameLevelChanged(level) => {
-                            *game_level.lock().unwrap() = level;
-                        }
-                        GameLoopEvent::SetLedBlinkSpeed(speed) => {
-                            *blink_speed.lock().unwrap() = Some(speed);
-                        }
-                        _ => {}
-                    })
-                    .unwrap()
-            };
-
-            log::info!("[LED_HANDLER]: Starting LED handler");
-            loop {
-                let game_level = *game_level.lock().unwrap();
-                let blink_speed = *blink_speed.lock().unwrap();
-
-                match game_level {
-                    Level::L2 => {
-                        let Some(speed) = blink_speed else {
-                            led1.set_low().unwrap();
-                            led2.set_low().unwrap();
-                            sleep(Duration::from_millis(100));
-                            continue;
-                        };
-                        led1.set_high().unwrap();
-                        led2.set_low().unwrap();
-                        sleep(Duration::from_millis(speed));
-                        led1.set_low().unwrap();
-                        led2.set_high().unwrap();
-                        sleep(Duration::from_millis(speed));
-                    }
-                    _ => {
-                        led1.set_low().unwrap();
-                        led2.set_low().unwrap();
-                        sleep(Duration::from_millis(100));
-                    }
-                }
-            }
-        })
-    };
+    let mut led1 =
+        ChrononautsLed::new(led1, 1, chrononauts_event_loop.clone()).expect("LED1 init failed");
+    let _led1_handler = thread::spawn(move || led1.run());
+    let mut led2 =
+        ChrononautsLed::new(led2, 2, chrononauts_event_loop.clone()).expect("LED2 init failed");
+    let _led2_handler = thread::spawn(move || led2.run());
 
     // #########################
     // # Accelerometer handler #
     // #########################
     let mut accelerometer =
         ChrononautsAccelerometer::new(i2c_driver, chrononauts_event_loop.clone());
-    thread::spawn(move || accelerometer.run());
+    let _accelerometer_handler = thread::spawn(move || accelerometer.run());
 
     // ###########################
     // # Main event loop handler #
@@ -447,41 +288,53 @@ impl MainEventLoop {
         }
     }
 
-    fn handle_message(&mut self, mut msg: ChrononautsMessage) {
-        log::info!("Message received: {:?}", msg);
-        match msg.source() {
-            MessageSource::Backend => {
-                if let MessagePayload::SetGameLevel(level) = msg.payload() {
-                    log::info!("[MAIN_EVENT]: Received SetGameLevel({level:?}) from Backend");
-                    self.game_level = level;
+    fn handle_backend_message(
+        &mut self,
+        mut msg: ChrononautsMessage,
+    ) -> Result<(), ChrononautsError> {
+        if let MessagePayload::SetGameLevel(level) = msg.payload() {
+            log::info!("[MAIN_EVENT]: Received SetGameLevel({level:?}) from Backend");
+            self.game_level = level;
 
-                    msg.change_source(MessageSource::Board);
+            msg.change_source(MessageSource::Board);
+            self.chrononauts_event_loop
+                .post::<MessageTransmissionEvent>(
+                    &MessageTransmissionEvent::Message(msg),
+                    delay::BLOCK,
+                )?;
+        }
+        Ok(())
+    }
+
+    fn handle_board_message(&mut self, msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
+        match msg.payload() {
+            MessagePayload::SetGameLevel(level) => {
+                log::info!("[MAIN_EVENT]: Received SetGameLevel from Wifi-Board");
+                self.game_level = level;
+            }
+            MessagePayload::LabyrinthAction(_action) => {
+                log::info!("[MAIN_EVENT]: Received LabyrinthAction from Wifi-Board");
+                if let Level::L4 = self.game_level {
                     self.chrononauts_event_loop
-                        .post::<MessageTransmissionEvent>(
-                            &MessageTransmissionEvent::Message(msg),
-                            delay::BLOCK,
-                        )
+                        .post::<WsTransmissionEvent>(&WsTransmissionEvent::Send(msg), delay::BLOCK)
                         .unwrap();
                 }
             }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn handle_message(&mut self, msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
+        match msg.source() {
+            MessageSource::Backend => {
+                self.handle_backend_message(msg)?;
+            }
             MessageSource::Board => {
-                if let MessagePayload::SetGameLevel(level) = msg.payload() {
-                    log::info!("[MAIN_EVENT]: Received SetGameLevel from Wifi-Board");
-                    self.game_level = level;
-                }
-                if let MessagePayload::LabyrinthAction(_) = msg.payload() {
-                    log::info!("[MAIN_EVENT]: Received LabyrinthAction from Wifi-Board");
-                    if let Level::L4 = self.game_level {
-                        self.chrononauts_event_loop
-                            .post::<WsTransmissionEvent>(
-                                &WsTransmissionEvent::Send(msg),
-                                delay::BLOCK,
-                            )
-                            .unwrap();
-                    }
-                }
+                self.handle_board_message(msg)?;
             }
         }
+        Ok(())
     }
 
     fn handle_accelerometer_direction(
@@ -492,8 +345,6 @@ impl MainEventLoop {
             return Ok(());
         };
 
-        // Handle the accelerometer direction change
-        log::info!("Accelerometer direction changed: {:?}", direction);
         let message = ChrononautsMessage::new_from_board(MessagePayload::LabyrinthAction(
             backend_api::labyrinth::Action {
                 device: self.chrononauts_id.into(),
@@ -515,30 +366,41 @@ impl MainEventLoop {
         Ok(())
     }
 
+    fn handle_event(&mut self, event: MainEvent) -> Result<(), ChrononautsError> {
+        match event {
+            MainEvent::ButtonChanged(state) => {
+                if self.button.debounce_button(state)? {
+                    log::info!("Button pressed");
+                }
+            }
+            MainEvent::WifiConnected => {
+                self.chrononauts_event_loop
+                    .post::<WsTransmissionEvent>(&WsTransmissionEvent::Connect, delay::BLOCK)?;
+            }
+            MainEvent::MessageReceived(msg) => self.handle_message(msg)?,
+            MainEvent::AccelerometerDirectionChanged(direction) => {
+                self.handle_accelerometer_direction(direction)?;
+            }
+            MainEvent::PotentiometerValueChanged(value) => {
+                log::info!("Potentiometer value changed: {}", value);
+                self.chrononauts_event_loop
+                    .post::<GameLoopEvent>(&GameLoopEvent::SetLedBlinkSpeed(1, value), delay::BLOCK)
+                    .unwrap();
+            }
+        }
+        Ok(())
+    }
+
     fn run(&mut self) -> Result<(), ChrononautsError> {
         block_on(pin!(async move {
             let mut subscription = self.chrononauts_event_loop.subscribe_async::<MainEvent>()?;
 
-            loop {
-                let event = subscription.recv().await?;
-                match event {
-                    MainEvent::ButtonChanged(state) => {
-                        if self.button.debounce_button(state)? {
-                            log::info!("Button pressed");
-                        }
-                    }
-                    MainEvent::WifiConnected => {
-                        self.chrononauts_event_loop.post::<WsTransmissionEvent>(
-                            &WsTransmissionEvent::Connect,
-                            delay::BLOCK,
-                        )?;
-                    }
-                    MainEvent::MessageReceived(msg) => self.handle_message(msg),
-                    MainEvent::AccelerometerDirectionChanged(direction) => {
-                        self.handle_accelerometer_direction(direction)?;
-                    }
-                }
+            while let Ok(event) = subscription.recv().await {
+                self.handle_event(event)?;
             }
+
+            // TODO: Handle error
+            Ok(())
         }))
     }
 }

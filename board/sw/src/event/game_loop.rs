@@ -14,7 +14,8 @@ use crate::consts;
 #[derive(Clone, Debug, Copy)]
 pub enum GameLoopEvent {
     GameLevelChanged(Level),
-    SetLedBlinkSpeed(u64),
+    SetLedBlinkSpeed(u8, u16),
+    SetLedState(u8, bool),
     ButtonPressed,
 }
 

@@ -29,6 +29,8 @@ pub enum MainEvent {
     WifiConnected,
     /// This event is issued by the accelrometer handler when the direction changes
     AccelerometerDirectionChanged(Direction),
+    /// This event is issued by the potentiometer handler when the value changes
+    PotentiometerValueChanged(u16),
 }
 
 unsafe impl EspEventSource for MainEvent {

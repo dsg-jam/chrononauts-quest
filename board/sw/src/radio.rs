@@ -20,7 +20,9 @@ use transport::TransportError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RadioError {
+    #[error("Empty payload")]
     EmptyPayload,
+    #[error("Radio not found")]
     RadioNotFound,
     #[error(transparent)]
     TransportError(#[from] TransportError),
@@ -30,17 +32,6 @@ pub enum RadioError {
     SpiError(#[from] Error<SpiError>),
     #[error(transparent)]
     PostcardError(#[from] postcard::Error),
-}
-
-impl std::fmt::Display for RadioError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            RadioError::EmptyPayload => write!(f, "Empty payload"),
-            RadioError::RadioNotFound => write!(f, "Radio not found"),
-            RadioError::SpiError(e) => write!(f, "SPI error: {}", e),
-            RadioError::PacketError(e) => write!(f, "Packet error: {}", e),
-            RadioError::TransportError(e) => write!(f, "Transport error: {}", e),
-            RadioError::PostcardError(e) => write!(f, "Postcard error: {}", e),
-        }
-    }
+    #[error(transparent)]
+    EspError(#[from] esp_idf_svc::sys::EspError),
 }
