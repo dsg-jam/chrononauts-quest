@@ -82,12 +82,12 @@ fn main() -> Result<(), ChrononautsError> {
 }
 
 fn run() -> Result<(), ChrononautsError> {
+    // ########
+    // # Init #
+    // ########
     let chrononauts_id = utils::get_chrononauts_id()?;
 
-    // Get system event loop (used for wifi)
     let system_event_loop = EspSystemEventLoop::take()?;
-
-    // Create an event loop for the main thread
     let chrononauts_event_loop = EspBackgroundEventLoop::new(&Default::default())?;
 
     let peripherals = Peripherals::take()?;
@@ -129,7 +129,9 @@ fn run() -> Result<(), ChrononautsError> {
 
     let poti_adc = AdcDriver::new(peripherals.adc1)?;
 
-    // Start the wifi driver
+    // ############################
+    // # Wi-Fi connection handler #
+    // ############################
     let _wifi_handler = if let ChrononautsId::L = chrononauts_id {
         let wifi_driver = WifiDriver::new(
             peripherals.modem,
@@ -145,8 +147,10 @@ fn run() -> Result<(), ChrononautsError> {
         None
     };
 
+    // ######################
+    // # DNS server handler #
+    // ######################
     let _dns_handler = if let ChrononautsId::L = chrononauts_id {
-        log::info!("Starting DNS server...");
         let mut dns = SimpleDns::try_new(AP_IP_ADDRESS).expect("DNS server init failed");
         Some(thread::spawn(move || loop {
             dns.poll().ok();
@@ -156,8 +160,9 @@ fn run() -> Result<(), ChrononautsError> {
         None
     };
 
-    log::info!("Starting radio components...");
-    log::info!("[RADIO]: Initializing radio transceiver...");
+    // #############################
+    // # Radio transceiver handler #
+    // #############################
     {
         let chrononauts_event_loop = chrononauts_event_loop.clone();
         thread::spawn(move || {
@@ -195,7 +200,9 @@ fn run() -> Result<(), ChrononautsError> {
         });
     }
 
-    log::info!("[RADIO]: Starting transport layer...");
+    // ###########################
+    // # Radio transport handler #
+    // ###########################
     let _radio_transport_handler = {
         let chrononauts_event_loop = chrononauts_event_loop.clone();
         thread::spawn(move || {
@@ -312,7 +319,9 @@ fn run() -> Result<(), ChrononautsError> {
         })?
     };
 
-    // Turning knob handler
+    // #########################
+    // # Potentiometer handler #
+    // #########################
     let _turning_knob_handler = {
         let chrononauts_event_loop = chrononauts_event_loop.clone();
         thread::spawn(move || {
@@ -352,7 +361,9 @@ fn run() -> Result<(), ChrononautsError> {
         })
     };
 
-    // Led handler
+    // ################
+    // # LEDs handler #
+    // ################
     let _led_handler = {
         let chrononauts_event_loop = chrononauts_event_loop.clone();
         thread::spawn(move || {
@@ -411,7 +422,9 @@ fn run() -> Result<(), ChrononautsError> {
         ChrononautsAccelerometer::new(i2c_driver, chrononauts_event_loop.clone());
     thread::spawn(move || accelerometer.run());
 
-    // Main event loop (The Brain<sup>TM</sup>)
+    // ###########################
+    // # Main event loop handler #
+    // ###########################
     let mut main_event_handler = MainEventLoop::new(chrononauts_event_loop, chrononauts_id);
     main_event_handler.run()
 }
