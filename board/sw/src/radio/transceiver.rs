@@ -1,51 +1,19 @@
-use core::fmt;
-use std::{
-    cmp::min,
-    fmt::{Display, Formatter},
-    thread::sleep,
-    time::Duration,
-};
+use std::{cmp::min, thread::sleep, time::Duration};
 
-use cc1101::{Cc1101, Error};
-use esp_idf_svc::hal::spi::{SpiDeviceDriver, SpiDriver, SpiError};
-pub use message::*;
+use cc1101::Cc1101;
+use esp_idf_svc::hal::spi::{SpiDeviceDriver, SpiDriver};
 
-mod message;
+use super::{ChrononautsPacket, RadioError};
+use crate::consts;
 
-// Maximum packet size is 61 bytes (64 - 3 bytes for length and RSSI/LQI)
-const MAX_PACKET_SIZE: usize = 61;
+pub struct ChrononautsTransceiver<'a>(Cc1101<SpiDeviceDriver<'a, SpiDriver<'a>>>);
 
-const RADIO_FREQUENCY_HZ: u64 = 433_920_000;
-
-#[derive(Debug, thiserror::Error)]
-pub enum RadioError {
-    EmptyPayload,
-    RadioNotFound,
-    #[error(transparent)]
-    MessageError(#[from] MessageError),
-    #[error(transparent)]
-    SpiError(#[from] Error<SpiError>),
-}
-
-impl Display for RadioError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            RadioError::EmptyPayload => write!(f, "Empty payload"),
-            RadioError::RadioNotFound => write!(f, "Radio not found"),
-            RadioError::SpiError(e) => write!(f, "SPI error: {}", e),
-            RadioError::MessageError(e) => write!(f, "Message error: {}", e),
-        }
-    }
-}
-
-pub struct ChrononautsRadio<'a>(Cc1101<SpiDeviceDriver<'a, SpiDriver<'a>>>);
-
-impl<'a> ChrononautsRadio<'a> {
+impl<'a> ChrononautsTransceiver<'a> {
     pub fn new(cc1101: Cc1101<SpiDeviceDriver<'a, SpiDriver<'a>>>) -> Self {
-        ChrononautsRadio(cc1101)
+        ChrononautsTransceiver(cc1101)
     }
 
-    pub fn init_radio(&mut self) -> Result<(), RadioError> {
+    pub fn init(&mut self) -> Result<(), RadioError> {
         // Reset the radio
         self.0.reset_chip()?;
 
@@ -72,11 +40,12 @@ impl<'a> ChrononautsRadio<'a> {
 
         self.0.white_data_enable(true)?;
         self.0.crc_enable(true)?;
-        self.0
-            .set_packet_length(cc1101::PacketLength::Variable(MAX_PACKET_SIZE as u8))?;
+        self.0.set_packet_length(cc1101::PacketLength::Variable(
+            consts::MAX_PACKET_SIZE as u8,
+        ))?;
 
         self.0.set_channel_number(0)?;
-        self.0.set_frequency(RADIO_FREQUENCY_HZ)?;
+        self.0.set_frequency(consts::RADIO_FREQUENCY_HZ)?;
 
         self.0.set_data_rate(4800)?;
 
@@ -145,23 +114,23 @@ impl<'a> ChrononautsRadio<'a> {
         Ok(())
     }
 
-    pub fn send_packet(&mut self, packet: ChrononautsPackage) -> Result<(), RadioError> {
-        let mut packet = packet.to_bytes();
+    pub fn send_packet(&mut self, packet: &ChrononautsPacket) -> Result<(), RadioError> {
+        let mut packet = postcard::to_vec::<_, { consts::MAX_PACKET_SIZE }>(packet)?;
         let mut size = packet.len();
 
         if size < 1 {
             return Err(RadioError::EmptyPayload);
         }
 
-        size = min(size, MAX_PACKET_SIZE);
+        size = min(size, consts::MAX_PACKET_SIZE);
 
         self.0.transmit(&mut packet, size as u8)?;
 
         Ok(())
     }
 
-    pub fn get_packet(&mut self) -> Result<ChrononautsPackage, RadioError> {
-        let mut buf = [0; MAX_PACKET_SIZE];
+    pub fn get_packet(&mut self) -> Result<ChrononautsPacket, RadioError> {
+        let mut buf = [0; consts::MAX_PACKET_SIZE];
         let mut length = 0u8;
         let ret = self.0.receive(&mut length, &mut buf)?;
 
@@ -180,7 +149,7 @@ impl<'a> ChrononautsRadio<'a> {
         self.0.set_idle_state()?;
         self.0.flush_rx_fifo_buffer()?;
         self.0.set_rx_state()?;
-        let packet = ChrononautsPackage::from_bytes(&buf[..length as usize])?;
+        let packet = postcard::from_bytes(&buf[..length as usize])?;
         Ok(packet)
     }
 }
