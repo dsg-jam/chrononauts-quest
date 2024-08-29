@@ -22,20 +22,36 @@ impl Serialize for LabyrinthMap {
         S: serde::ser::Serializer,
     {
         // only inlcude the tiles in the serialized output
-        let mut s = String::new();
-        for row in &self.tiles {
-            let mut row_str = String::new();
-            for tile in row {
-                let tile_char = match tile {
-                    Tile::Wall => '#',
-                    Tile::Empty => ' ',
-                };
-                row_str.push(tile_char);
-            }
-            s.push_str(&row_str);
-            s.push('\n');
-        }
-        serializer.serialize_str(&s)
+        self.tiles
+            .iter()
+            .enumerate()
+            .map(|(y, row)| {
+                let mut line = row
+                    .iter()
+                    .enumerate()
+                    .map(|(x, tile)| {
+                        let mut tile = match tile {
+                            Tile::Wall => '#',
+                            Tile::Empty => ' ',
+                        };
+                        if self.player1_start_state.position.x == x as u8
+                            && self.player1_start_state.position.y == y as u8
+                        {
+                            tile = '1';
+                        }
+                        if self.player2_start_state.position.x == x as u8
+                            && self.player2_start_state.position.y == y as u8
+                        {
+                            tile = '2';
+                        }
+                        tile
+                    })
+                    .collect::<String>();
+                line.push('\n');
+                line
+            })
+            .collect::<String>()
+            .serialize(serializer)
     }
 }
 

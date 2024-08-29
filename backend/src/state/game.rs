@@ -271,6 +271,38 @@ impl Game {
         true
     }
 
+    pub(super) async fn labyrinth_solved(
+        db: &FirestoreDb,
+        game_ref: &FirestoreReference,
+    ) -> FirestoreResult<bool> {
+        let (_, _, doc_id) = game_ref.split(db.get_documents_path());
+        let game: Option<Game> = db
+            .fluent()
+            .select()
+            .fields(paths!(Game::{labyrinth}))
+            .by_id_in(Game::COLLECTION)
+            .obj()
+            .one(doc_id.clone())
+            .await?;
+        let Some(mut game) = game else {
+            tracing::warn!("game not found");
+            return Ok(false);
+        };
+        let p1 = game
+            .labyrinth
+            .player1
+            .get_or_insert(game.labyrinth.map.player1_start_state.clone());
+        let p2 = game
+            .labyrinth
+            .player2
+            .get_or_insert(game.labyrinth.map.player2_start_state.clone());
+        if p1.position == p2.position {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
     pub(super) async fn perform_labyrinth_action(
         db: &FirestoreDb,
         game_ref: &FirestoreReference,
