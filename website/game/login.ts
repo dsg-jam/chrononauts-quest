@@ -6,21 +6,18 @@ export async function boot(terminal: Terminal): Promise<void> {
   terminal.clear();
 
   await terminal.type("Booting Chronix 0.1.0", { startDelay: 2000 });
+  await terminal.typeLine("...", { charDelay: 100 });
+  await terminal.typeLine("Detecting Terminal", { endDelay: 0 });
+  await terminal.typeLine("...........", { charDelay: 100 });
   await terminal.type(
     [
-      "...",
-      "Detecting Terminal...",
-      "...........",
       "Found wireless terminal.",
       ".",
       ".",
-      ".",
-      ".",
-      ".",
+      "File system encrypted, login required.",
     ],
     { lineEndDelay: 250 },
   );
-  await terminal.type("OK.\n");
 }
 
 export async function login(terminal: Terminal): Promise<BackendConnection> {

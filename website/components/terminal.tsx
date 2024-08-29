@@ -136,6 +136,10 @@ export class Terminal {
       await sleep(startDelay, this.abort);
     }
 
+    if (!text) {
+      text = "\n";
+    }
+
     const chars = text.split("");
     let firstChar = true;
     for (const char of chars) {
