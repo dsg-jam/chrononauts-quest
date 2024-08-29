@@ -1,12 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Source_Code_Pro } from "next/font/google";
 import { ReactNode } from "react";
-
-const font = Source_Code_Pro({
-  subsets: ["latin"],
-  fallback: ["monospace"],
-});
 
 export const metadata: Metadata = {
   title: "Chrononauts Quest",
@@ -20,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={font.className}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

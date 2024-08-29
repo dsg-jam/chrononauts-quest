@@ -17,6 +17,7 @@
 		"vscode": {
 			"extensions": [
 				"BarbossHack.crates-io",
+				"eamodio.gitlens",
 				"esbenp.prettier-vscode",
 				"foxundermoon.shell-format",
 				"ms-azuretools.vscode-docker",
