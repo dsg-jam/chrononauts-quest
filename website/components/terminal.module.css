@@ -534,6 +534,43 @@ input:checked + .slider:before {
   transform: translateX(26px);
 }
 
+/*********** MEDIA QUERIES *************/
+
+/* For really small screens, only show fullscreen mode */
+@media only screen and (max-width: 100ch), (max-height: 80ch) {
+  #crt {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  #controls {
+    display: none;
+  }
+  #slider {
+    display: initial;
+    position: fixed;
+    top: 50%;
+    right: 50%;
+    opacity: 1;
+    transition:
+      top 1s ease-out,
+      right 1s ease-out,
+      opacity 1s ease-out;
+    animation: glow 3s ease-in-out infinite;
+  }
+  #slider.on {
+    top: 10px;
+    right: 10px;
+    opacity: 0.2;
+    animation: none;
+  }
+}
+
+/* Animations */
+
 @keyframes cursor {
   0% {
     opacity: 1;
