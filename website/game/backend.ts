@@ -132,17 +132,22 @@ export class BackendConnection {
       const onAbort = () => {
         reject(abort.reason);
       };
+      const onTimeout = () => {
+        reject(new Error("Connection timeout"));
+      };
 
       const unsubscribeUpdate = this.onUpdate(onUpdate);
       this.ws.addEventListener("close", onClose);
       this.ws.addEventListener("error", onError);
       abort.addEventListener("abort", onAbort);
+      const timeoutId = setTimeout(onTimeout, 10000);
 
       unsubscribe = () => {
         unsubscribeUpdate();
         this.ws.removeEventListener("close", onClose);
         this.ws.removeEventListener("error", onError);
         abort.removeEventListener("abort", onAbort);
+        clearTimeout(timeoutId);
       };
     });
 
