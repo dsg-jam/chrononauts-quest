@@ -15,7 +15,11 @@ use esp_idf_svc::{
     timer::{EspAsyncTimer, EspTaskTimerService},
 };
 
-use crate::{consts, event::GameLoopEvent, ChrononautsEventLoop};
+use crate::{
+    consts::{self, LED_MORSE_UNIT_MS},
+    event::GameLoopEvent,
+    ChrononautsEventLoop,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum LedError {
@@ -35,6 +39,7 @@ where
     led_number: u8,
     state: bool,
     event_loop: ChrononautsEventLoop,
+    timer: EspAsyncTimer,
 }
 
 impl<T> ChrononautsLed<T>
@@ -48,11 +53,14 @@ where
     ) -> Result<Self, LedError> {
         led.set_low()?;
         let state = false;
+        let timer_service = EspTaskTimerService::new()?;
+        let timer = timer_service.timer_async()?;
         Ok(Self {
             led,
             led_number,
             state,
             event_loop,
+            timer,
         })
     }
 
@@ -87,46 +95,77 @@ where
     /// Show a space between components (dot or dash)
     ///
     /// This is a 1 unit pause
-    async fn show_inter_component_pause(
-        &mut self,
-        async_timer: &mut EspAsyncTimer,
-    ) -> Result<(), LedError> {
+    async fn show_inter_component_pause(&mut self) -> Result<(), LedError> {
         self.set_low()?;
-        async_timer.after(Duration::from_millis(1000)).await?;
+        self.wait_for(LED_MORSE_UNIT_MS).await?;
         Ok(())
     }
 
     /// Show a space between letters
     ///
     /// This is a 3 units pause
-    async fn show_inter_letter_pause(
-        &mut self,
-        async_timer: &mut EspAsyncTimer,
-    ) -> Result<(), LedError> {
+    async fn show_inter_letter_pause(&mut self) -> Result<(), LedError> {
         self.set_low()?;
-        async_timer.after(Duration::from_millis(2000)).await?;
+        self.wait_for(3 * LED_MORSE_UNIT_MS).await?;
         Ok(())
     }
 
-    async fn show_time_pulse(&mut self, async_timer: &mut EspAsyncTimer) -> Result<(), LedError> {
+    async fn show_time_pulse(&mut self) -> Result<(), LedError> {
+        let fifths_of_period = LED_MORSE_UNIT_MS / 5;
         self.set_low()?;
-        async_timer.after(Duration::from_millis(400)).await?;
+        self.wait_for(2 * fifths_of_period).await?;
         self.set_high()?;
-        async_timer.after(Duration::from_millis(200)).await?;
+        self.wait_for(fifths_of_period).await?;
         self.set_low()?;
-        async_timer.after(Duration::from_millis(400)).await?;
+        self.wait_for(2 * fifths_of_period).await?;
         Ok(())
     }
 
-    async fn show_dot(&mut self, async_timer: &mut EspAsyncTimer) -> Result<(), LedError> {
+    async fn show_dot(&mut self) -> Result<(), LedError> {
         self.set_high()?;
-        async_timer.after(Duration::from_millis(1000)).await?;
+        self.wait_for(LED_MORSE_UNIT_MS).await?;
         Ok(())
     }
 
-    async fn show_dash(&mut self, async_timer: &mut EspAsyncTimer) -> Result<(), LedError> {
+    async fn show_dash(&mut self) -> Result<(), LedError> {
         self.set_high()?;
-        async_timer.after(Duration::from_millis(3000)).await?;
+        self.wait_for(3 * LED_MORSE_UNIT_MS).await?;
+        Ok(())
+    }
+
+    async fn l3(&mut self) -> Result<(), LedError> {
+        let mut additional_pause = false;
+        for c in consts::L3_ENCODED_KEY.chars() {
+            if self.led_number == 1 {
+                if additional_pause {
+                    self.show_inter_component_pause().await?;
+                    additional_pause = false;
+                }
+                match c {
+                    '.' => {
+                        self.show_dot().await?;
+                        additional_pause = true;
+                    }
+                    '-' => {
+                        self.show_dash().await?;
+                        additional_pause = true;
+                    }
+                    _ => {
+                        self.show_inter_letter_pause().await?;
+                    }
+                }
+            } else {
+                for _ in 0..morse_length() {
+                    self.show_time_pulse().await?;
+                }
+            }
+        }
+        self.set_low()?;
+        Ok(())
+    }
+
+    async fn wait_for(&mut self, millis: u64) -> Result<(), LedError> {
+        self.timer.after(Duration::from_millis(millis)).await?;
         Ok(())
     }
 
@@ -166,72 +205,48 @@ where
                 .unwrap()
         };
 
-        let timer_service = EspTaskTimerService::new()?;
         block_on(pin!(async move {
-            let mut async_timer = timer_service.timer_async()?;
             loop {
                 let blink_speed = *blink_speed.lock().unwrap();
                 let game_level = *game_level.lock().unwrap();
                 let show_l3 = *show_encryption_key.lock().unwrap();
-                *show_encryption_key.lock().unwrap() = false;
+                let expected_state = *expected_state.lock().unwrap();
                 match game_level {
-                    Level::L2 => {
-                        if let Some(speed) = blink_speed {
-                            async_timer
-                                .after(Duration::from_millis(speed as u64))
-                                .await?;
-                            self.toggle()?;
-                            continue;
-                        }
+                    Level::L2 if blink_speed.is_some() => {
+                        self.wait_for(blink_speed.unwrap() as u64).await?;
+                        self.toggle()?;
+                        continue;
                     }
-                    Level::L3 => {
-                        if show_l3 {
-                            for c in consts::L3_ENCODED_KEY.chars() {
-                                if self.led_number == 1 {
-                                    match c {
-                                        '.' => {
-                                            self.show_dot(&mut async_timer).await?;
-                                            self.show_inter_component_pause(&mut async_timer)
-                                                .await?;
-                                        }
-                                        '-' => {
-                                            self.show_dash(&mut async_timer).await?;
-                                            self.show_inter_component_pause(&mut async_timer)
-                                                .await?;
-                                        }
-                                        _ => {
-                                            self.show_inter_letter_pause(&mut async_timer).await?;
-                                        }
-                                    }
-                                } else {
-                                    match c {
-                                        '.' => {
-                                            self.show_time_pulse(&mut async_timer).await?;
-                                            self.show_time_pulse(&mut async_timer).await?;
-                                        }
-                                        '-' => {
-                                            self.show_time_pulse(&mut async_timer).await?;
-                                            self.show_time_pulse(&mut async_timer).await?;
-                                            self.show_time_pulse(&mut async_timer).await?;
-                                            self.show_time_pulse(&mut async_timer).await?;
-                                        }
-                                        _ => {
-                                            self.show_time_pulse(&mut async_timer).await?;
-                                            self.show_time_pulse(&mut async_timer).await?;
-                                        }
-                                    }
-                                }
-                            }
-                            self.set_low()?;
-                            continue;
-                        }
+                    Level::L3 if show_l3 => {
+                        self.l3().await?;
+                        *show_encryption_key.lock().unwrap() = false;
                     }
                     _ => {}
                 }
-                let expected_state = *expected_state.lock().unwrap();
                 self.set_state(expected_state)?;
-                async_timer.after(Duration::from_millis(100)).await.unwrap();
+                self.wait_for(100).await?;
             }
         }))
     }
+}
+
+fn morse_length() -> usize {
+    let mut additional_pause = false;
+    consts::L3_ENCODED_KEY.chars().fold(0, |mut acc, x| {
+        if additional_pause {
+            acc += 1;
+            additional_pause = false;
+        }
+        match x {
+            '.' => {
+                additional_pause = true;
+                acc + 1
+            }
+            '-' => {
+                additional_pause = true;
+                acc + 3
+            }
+            _ => acc + 3,
+        }
+    })
 }

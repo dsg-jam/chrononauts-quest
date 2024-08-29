@@ -33,6 +33,11 @@ pub const ACCEL_FETCH_INTERVAL_MS: u64 = 500;
 /// Sampling rate of the potentiometer in milliseconds
 pub const POTI_SAMPLING_RATE_MS: u64 = 100;
 
+/// ## LEDs
+
+/// Morse unit duration
+pub const LED_MORSE_UNIT_MS: u64 = 1000;
+
 /// Event IDs
 ///
 /// These are used to identify the events in the event loop. All events MUST have a unique ID.

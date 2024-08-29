@@ -212,7 +212,9 @@ impl GameLoop {
             let mut subscription = self.chrononauts_event_loop.subscribe_async::<MainEvent>()?;
 
             if let ChrononautsId::T = self.chrononauts_id {
-                self.send_to_board(ChrononautsMessage::new_from_board(MessagePayload::RecoveryRequest))?;
+                self.send_to_board(ChrononautsMessage::new_from_board(
+                    MessagePayload::RecoveryRequest,
+                ))?;
             }
 
             while let Ok(event) = subscription.recv().await {
