@@ -75,6 +75,12 @@ impl GameLoop {
                 self.chrononauts_event_loop
                     .post::<GameLoopEvent>(&GameLoopEvent::ShowEncryptionKey, delay::BLOCK)?;
             }
+            MessagePayload::RecoveryRequest => {
+                let msg = ChrononautsMessage::new_from_board(MessagePayload::SetGameLevel(
+                    self.game_level,
+                ));
+                self.send_to_board(msg)?;
+            }
             _ => {}
         }
         Ok(())
@@ -204,6 +210,10 @@ impl GameLoop {
     pub fn run(&mut self) -> Result<(), ChrononautsError> {
         block_on(pin!(async move {
             let mut subscription = self.chrononauts_event_loop.subscribe_async::<MainEvent>()?;
+
+            if let ChrononautsId::T = self.chrononauts_id {
+                self.send_to_board(ChrononautsMessage::new_from_board(MessagePayload::RecoveryRequest))?;
+            }
 
             while let Ok(event) = subscription.recv().await {
                 self.handle_event(event)?;

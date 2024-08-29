@@ -129,7 +129,6 @@ impl ChrononautsTransport {
             loop {
                 if let Ok(packet) = packets_to_process_rx.try_recv() {
                     if let Ok(Some(message)) = self.handle_reception(packet) {
-                        log::info!("Received message @ TRANSPORT LAYER");
                         self.event_loop
                             .post::<MainEvent>(&MainEvent::MessageReceived(message), delay::BLOCK)
                             .unwrap();

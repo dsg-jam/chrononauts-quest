@@ -6,8 +6,8 @@ pub const BOARD_PASSWORD: &str = "d81bc8c90e0ee8db";
 
 pub const L3_ENCODED_KEY: &str = ". -. .. --. -- .-"; // enigma
 
-pub const WINDOW_SIZE: usize = 4;
-pub const TIMEOUT_MSEC: usize = 2000;
+pub const WINDOW_SIZE: usize = 1;
+pub const TIMEOUT_MSEC: usize = 1000;
 
 // Maximum packet size is 61 bytes (64 - 3 bytes for length and RSSI/LQI)
 pub const MAX_PACKET_SIZE: usize = 61;
