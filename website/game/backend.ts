@@ -1,4 +1,4 @@
-import { safeJsonParse } from "@/utils/json";
+import { safeJsonParse, safeJsonStringify } from "@/utils/json";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
 
@@ -17,7 +17,9 @@ type Msg =
   | ({
       "@type": "GAME_STATE";
     } & MsgGameState)
-  | ({ "@type": "LABYRINTH_STATE" } & MsgLabyrinthState);
+  | ({ "@type": "LABYRINTH_STATE" } & MsgLabyrinthState)
+  | ({ "@type": "ENTER_ENCRYPTION_KEY" } & MsgEnterEncryptionKey)
+  | { "@type": "ENCRYPTION_KEY_REJECTED" };
 
 type MsgGameState = {
   level: Level;
@@ -33,16 +35,21 @@ type MsgLabyrinthPlayer = {
   direction: "UP" | "DOWN" | "LEFT" | "RIGHT";
 };
 
+type MsgEnterEncryptionKey = {
+  key: string;
+};
+
 export class BackendConnection {
   private ws: WebSocket;
   private updateListeners: Array<() => void>;
-  private level: Level | null;
+  private level: Level | null = null;
+  private pendingEncryptionKeyResponse: ((success: boolean) => void) | null =
+    null;
 
   constructor(ws: WebSocket) {
     ws.binaryType = "arraybuffer";
     this.ws = ws;
     this.updateListeners = [];
-    this.level = null;
 
     ws.addEventListener("open", (event) => {
       console.info("open", event);
@@ -64,8 +71,16 @@ export class BackendConnection {
       switch (msg["@type"]) {
         case "GAME_STATE":
           this.setLevel(msg.level);
+          if (this.pendingEncryptionKeyResponse && msg.level === "L4") {
+            this.pendingEncryptionKeyResponse(true);
+          }
           break;
         case "LABYRINTH_STATE":
+          break;
+        case "ENCRYPTION_KEY_REJECTED":
+          if (this.pendingEncryptionKeyResponse) {
+            this.pendingEncryptionKeyResponse(false);
+          }
           break;
       }
     });
@@ -78,9 +93,54 @@ export class BackendConnection {
     abort: AbortSignal,
     login: LoginCredentials,
   ): Promise<BackendConnection> {
+    abort.throwIfAborted();
     const connection = new BackendConnection(createWebSocket(login));
     await connection.waitForConnection(abort);
     return connection;
+  }
+
+  async enterEncryptionKey(key: string, abort: AbortSignal): Promise<void> {
+    if (this.pendingEncryptionKeyResponse) {
+      throw new Error("Already waiting for encryption key response");
+    }
+
+    abort.throwIfAborted();
+
+    let unsubscribe = null as (() => void) | null;
+    const promise = new Promise<void>((resolve, reject) => {
+      const onTimeout = () => {
+        reject(new Error("timeout"));
+      };
+      const onAbort = () => {
+        reject(new Error(abort.reason));
+      };
+
+      this.pendingEncryptionKeyResponse = (success) => {
+        if (success) {
+          resolve();
+        } else {
+          reject(new Error("Encryption key rejected"));
+        }
+      };
+      const timeoutId = setTimeout(onTimeout, 10000);
+      abort.addEventListener("abort", onAbort);
+
+      unsubscribe = () => {
+        this.pendingEncryptionKeyResponse = null;
+        clearTimeout(timeoutId);
+        abort.removeEventListener("abort", onAbort);
+      };
+
+      this.ws.send(safeJsonStringify({ "@type": "ENTER_ENCRYPTION_KEY", key }));
+    });
+
+    try {
+      await promise;
+    } finally {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    }
   }
 
   getLevel(): Level {

@@ -3,16 +3,25 @@ import { boot, login } from "./login";
 import { Vfs } from "./vfs";
 import { Terminal } from "@/components/terminal";
 
+// Set to true to skip the boot animation and login process during development.
+const skipBootAnimation = false;
+
 export async function run(terminal: Terminal) {
-  await boot(terminal);
+  if (!skipBootAnimation) {
+    await boot(terminal);
+  }
+
   const backend = await login(terminal);
-  await terminal.type(
-    ["Login successful.", "", "", "File system decrypted.", "", "", ""],
-    {
-      lineEndDelay: 250,
-    },
-  );
-  await terminal.typeLine("Activating shell.......", { endDelay: 3000 });
+
+  if (!skipBootAnimation) {
+    await terminal.type(
+      ["Login successful.", "", "", "File system decrypted.", "", "", ""],
+      {
+        lineEndDelay: 250,
+      },
+    );
+    await terminal.typeLine("Activating shell.......", { endDelay: 5000 });
+  }
   terminal.clear();
 
   const vfs = new Vfs();

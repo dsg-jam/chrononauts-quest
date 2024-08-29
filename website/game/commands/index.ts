@@ -1,7 +1,10 @@
 import { BackendConnection } from "../backend";
 import { Vfs } from "../vfs";
 import cat from "./cat";
+import conninfo from "./conninfo";
+import decrypt from "./decrypt";
 import help from "./help";
+import locate from "./locate";
 import ls from "./ls";
 import { Terminal } from "@/components/terminal";
 
@@ -16,4 +19,11 @@ export type Command = {
   }) => Promise<void>;
 };
 
-export const allCommands: Command[] = [cat, help, ls];
+export const allCommands: Command[] = [
+  cat,
+  conninfo,
+  decrypt,
+  help,
+  locate,
+  ls,
+];

@@ -1,4 +1,4 @@
-import { allCommands, Command } from ".";
+import { Command } from ".";
 
 export default {
   name: "cat",
