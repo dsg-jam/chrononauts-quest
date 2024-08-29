@@ -65,6 +65,10 @@ impl StateHandle {
         Game::complete_l3(&self.db, game_ref).await
     }
 
+    pub async fn labyrinth_solved(&self, game_ref: &FirestoreReference) -> FirestoreResult<bool> {
+        Game::labyrinth_solved(&self.db, game_ref).await
+    }
+
     pub async fn perform_labyrinth_action(
         &self,
         game_ref: &FirestoreReference,
@@ -73,7 +77,7 @@ impl StateHandle {
         Game::perform_labyrinth_action(&self.db, game_ref, action).await
     }
 
-    pub async fn _complete_l4(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
+    pub async fn complete_l4(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
         Game::complete_l4(&self.db, game_ref).await
     }
 }
