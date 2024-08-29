@@ -73,13 +73,13 @@
 /*********** GENERIC STUFF *************/
 
 .container {
-  font-size: 12px;
   box-sizing: border-box;
   background: #111;
   margin: 0;
   overflow: hidden;
-  font-family: sans-serif;
+  height: 100%;
 }
+
 .container *,
 .container *:before,
 .container *:after {
@@ -149,12 +149,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #3f3933;
+  background: #2d2c2a;
   border-radius: 0.5rem;
 }
-#monitor:not(.off) {
-  box-shadow: 0.6px 90px 110px -60px var(--bg); /* screen glow */
-}
+
 #screen {
   position: relative;
   border: 30px solid transparent;

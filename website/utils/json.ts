@@ -27,6 +27,9 @@ export function safeJsonStringify<T>(data: JSONCompatible<T>) {
   return JSON.stringify(data);
 }
 
-export function safeJsonParse(text: string): unknown {
+export function safeJsonParse(text: string | ArrayBuffer): unknown {
+  if (text instanceof ArrayBuffer) {
+    text = new TextDecoder().decode(text);
+  }
   return JSON.parse(text);
 }

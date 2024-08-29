@@ -33,7 +33,7 @@ export async function login(terminal: Terminal): Promise<BackendConnection> {
         password,
       });
     } catch (err) {
-      await terminal.prompt("Login failed. Please try again.");
+      await terminal.type("Login failed. Please try again.");
       continue;
     }
     return connection;

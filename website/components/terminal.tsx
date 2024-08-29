@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 
 export function TerminalRenderer() {
   const terminalEl = useRef<HTMLDivElement>(null);
-  const terminal = useRef<Terminal | null>(null);
+  const terminalRef = useRef<Terminal | null>(null);
 
   useEffect(() => {
     if (!terminalEl.current) {
@@ -15,18 +15,24 @@ export function TerminalRenderer() {
     }
 
     const abortController = new AbortController();
-    terminal.current = new Terminal(abortController.signal, terminalEl.current);
-    run(terminal.current).catch(() => {});
+    const newTerminal = new Terminal(
+      abortController.signal,
+      terminalEl.current,
+    );
+    run(newTerminal).catch(() => {});
+    terminalRef.current = newTerminal;
 
     return () => {
       abortController.abort();
+      terminalRef.current = null;
+      newTerminal.clear();
     };
   }, [terminalEl.current]);
 
   return (
     <div
       className={[styles.container, styles["theme-green"]].join(" ")}
-      onClick={() => terminal.current?.focusInput()}
+      onClick={() => terminalRef.current?.focusInput()}
     >
       <div id={styles.monitor}>
         <div id={styles.screen}>
@@ -193,25 +199,29 @@ async function inputReader({
     historyIndex: -1,
   };
 
+  const onValueChange = () => {
+    // For password field, fill the data-pw attr with asterisks
+    // which will be shown using CSS
+    if (hidden) {
+      let length = el.textContent?.length;
+      el.setAttribute("data-pw", Array(length).fill("*").join(""));
+    }
+  };
+
+  const onPrintableKey = (key: string) => {
+    // Wrap the character in a span
+    let span = document.createElement("span");
+    // Add span to the input
+    span.classList.add(styles.char);
+    span.textContent = key;
+    el.appendChild(span);
+    onValueChange();
+
+    moveCaretToEnd(el);
+  };
+
   let unsubscribe = null as (() => void) | null;
   const promise = new Promise<string>((resolve, reject) => {
-    const onPrintableKey = (key: string) => {
-      // Wrap the character in a span
-      let span = document.createElement("span");
-      // Add span to the input
-      span.classList.add(styles.char);
-      span.textContent = key;
-      el.appendChild(span);
-
-      // For password field, fill the data-pw attr with asterisks
-      // which will be shown using CSS
-      if (hidden) {
-        let length = el.textContent?.length;
-        el.setAttribute("data-pw", Array(length).fill("*").join(""));
-      }
-      // moveCaretToEnd(this.el);
-    };
-
     const onKeyDown = (ev: KeyboardEvent) => {
       switch (ev.key) {
         case "Enter":
@@ -234,11 +244,11 @@ async function inputReader({
             historyNewestFirst[state.historyIndex] ?? state.lineBuf;
           break;
         case "Backspace":
-          // Prevent inserting a <br> when removing the last character
-          if (el.textContent?.length === 1) {
-            ev.preventDefault();
-            el.innerHTML = "";
+          ev.preventDefault();
+          if (el.lastChild) {
+            el.removeChild(el.lastChild);
           }
+          onValueChange();
           break;
         default:
           if (isPrintable(ev.keyCode) && !ev.ctrlKey) {
@@ -283,4 +293,16 @@ function isPrintable(keycode: number) {
     (keycode > 185 && keycode < 193) || // ;=,-./` (in order)
     (keycode > 218 && keycode < 223)
   );
+}
+
+function moveCaretToEnd(el: HTMLElement) {
+  const range = document.createRange(); //Create a range (a range is a like the selection but invisible)
+  range.selectNodeContents(el); //Select the entire contents of the element with the range
+  range.collapse(false); //collapse the range to the end point. false means collapse to end rather than the start
+  const selection = window.getSelection(); //get the selection object (allows you to change selection)
+  if (!selection) {
+    return;
+  }
+  selection.removeAllRanges(); //remove any selections already made
+  selection.addRange(range); //make the range you have just created the visible selection
 }

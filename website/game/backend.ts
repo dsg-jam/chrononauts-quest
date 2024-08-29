@@ -23,10 +23,13 @@ type MsgGameState = {
 
 export class BackendConnection {
   private ws: WebSocket;
+  private updateListeners: Array<() => void>;
   private level: Level | null;
 
   constructor(ws: WebSocket) {
+    ws.binaryType = "arraybuffer";
     this.ws = ws;
+    this.updateListeners = [];
     this.level = null;
 
     ws.addEventListener("open", (event) => {
@@ -36,8 +39,15 @@ export class BackendConnection {
       console.info("close", event);
     });
     ws.addEventListener("message", (event) => {
-      console.info("message", event);
-      const msg = safeJsonParse(event.data) as Msg;
+      let data = event.data as string | ArrayBuffer;
+      let msg;
+      try {
+        msg = safeJsonParse(data) as Msg;
+      } catch (err) {
+        console.error("error parsing message", { event, err });
+        return;
+      }
+
       switch (msg["@type"]) {
         case "GAME_STATE":
           this.setLevel(msg.level);
@@ -63,14 +73,40 @@ export class BackendConnection {
   }
 
   private setLevel(level: Level): void {
+    if (this.level === level) {
+      return;
+    }
     this.level = level;
+    this.dispatchUpdate();
+  }
+
+  private dispatchUpdate(): void {
+    for (const listener of this.updateListeners) {
+      try {
+        listener();
+      } catch (err) {
+        console.error("error in update listener", err);
+      }
+    }
+  }
+
+  private onUpdate(listener: () => void): () => void {
+    this.updateListeners.push(listener);
+    return () => {
+      const index = this.updateListeners.indexOf(listener);
+      if (index !== -1) {
+        this.updateListeners.splice(index, 1);
+      }
+    };
   }
 
   private async waitForConnection(abort: AbortSignal): Promise<void> {
     let unsubscribe = null as (() => void) | null;
     const promise = new Promise<void>((resolve, reject) => {
-      const onOpen = () => {
-        resolve();
+      const onUpdate = () => {
+        if (this.level !== null) {
+          resolve();
+        }
       };
       const onClose = () => {
         reject(new Error("Connection closed"));
@@ -82,13 +118,13 @@ export class BackendConnection {
         reject(abort.reason);
       };
 
-      this.ws.addEventListener("open", onOpen);
+      const unsubscribeUpdate = this.onUpdate(onUpdate);
       this.ws.addEventListener("close", onClose);
       this.ws.addEventListener("error", onError);
       abort.addEventListener("abort", onAbort);
 
       unsubscribe = () => {
-        this.ws.removeEventListener("open", onOpen);
+        unsubscribeUpdate();
         this.ws.removeEventListener("close", onClose);
         this.ws.removeEventListener("error", onError);
         abort.removeEventListener("abort", onAbort);
