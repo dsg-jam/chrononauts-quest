@@ -7,7 +7,10 @@ import { useEffect, useRef } from "react";
 
 export function TerminalRenderer() {
   const terminalEl = useRef<HTMLDivElement>(null);
-  const terminalRef = useRef<Terminal | null>(null);
+  const stateRef = useRef({
+    terminal: null as Terminal | null,
+    promise: null as Promise<void> | null,
+  });
 
   useEffect(() => {
     if (!terminalEl.current) {
@@ -15,24 +18,36 @@ export function TerminalRenderer() {
     }
 
     const abortController = new AbortController();
-    const newTerminal = new Terminal(
-      abortController.signal,
-      terminalEl.current,
-    );
-    run(newTerminal).catch(() => {});
-    terminalRef.current = newTerminal;
+    const terminal = new Terminal(abortController.signal, terminalEl.current);
+    stateRef.current.terminal = terminal;
+
+    const oldPromise = stateRef.current.promise;
+    stateRef.current.promise = (async () => {
+      if (oldPromise) {
+        await oldPromise;
+      }
+
+      try {
+        terminal.clear();
+        await run(terminal);
+      } catch (err) {
+        const isAbortError =
+          err instanceof DOMException && err.name === "AbortError";
+        if (!isAbortError) {
+          console.error(err);
+        }
+      }
+    })();
 
     return () => {
       abortController.abort();
-      terminalRef.current = null;
-      newTerminal.clear();
     };
-  }, [terminalEl.current]);
+  }, [terminalEl]);
 
   return (
     <div
       className={[styles.container, styles["theme-green"]].join(" ")}
-      onClick={() => terminalRef.current?.focusInput()}
+      onClick={() => stateRef.current.terminal?.focusInput()}
     >
       <div id={styles.monitor}>
         <div id={styles.screen}>
@@ -132,7 +147,7 @@ export class Terminal {
 
       switch (char) {
         case "\n":
-          lineEl.innerHTML += "<br>";
+          lineEl.innerHTML += "<br>&nbsp;";
           break;
         case "\t":
           lineEl.innerHTML += "&nbsp;&nbsp;";

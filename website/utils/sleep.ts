@@ -1,4 +1,6 @@
 export async function sleep(ms: number, abort: AbortSignal) {
+  abort.throwIfAborted();
+
   let unsubscribe = null as (() => void) | null;
   const promise = new Promise<void>((resolve, reject) => {
     const onAbort = () => {

@@ -13,12 +13,24 @@ export interface LoginCredentials {
   password: string;
 }
 
-type Msg = {
-  "@type": "GAME_STATE";
-} & MsgGameState;
+type Msg =
+  | ({
+      "@type": "GAME_STATE";
+    } & MsgGameState)
+  | ({ "@type": "LABYRINTH_STATE" } & MsgLabyrinthState);
 
 type MsgGameState = {
   level: Level;
+};
+
+type MsgLabyrinthState = {
+  player1: MsgLabyrinthPlayer;
+  player2: MsgLabyrinthPlayer;
+};
+
+type MsgLabyrinthPlayer = {
+  position: { x: number; y: number };
+  direction: "UP" | "DOWN" | "LEFT" | "RIGHT";
 };
 
 export class BackendConnection {
@@ -48,9 +60,12 @@ export class BackendConnection {
         return;
       }
 
+      console.info("message", msg);
       switch (msg["@type"]) {
         case "GAME_STATE":
           this.setLevel(msg.level);
+          break;
+        case "LABYRINTH_STATE":
           break;
       }
     });

@@ -138,13 +138,14 @@
 
 .typer {
   word-break: break-all;
+  white-space: pre;
 }
 
 /*********** PARTS OF THE SCREEN *************/
 
 #monitor {
   margin: 3vmin auto;
-  padding: 5.5vmin;
+  padding: 0.5vmin;
   width: min-content;
   display: flex;
   flex-direction: column;
