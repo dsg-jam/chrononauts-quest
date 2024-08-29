@@ -4,12 +4,13 @@
 //!
 
 use core::time::Duration;
+use std::pin::pin;
 
 use backend_api::BoardMessage;
 use esp_idf_svc::{
-    hal::delay,
+    hal::{delay, task::block_on},
     io::EspIOError,
-    tls::X509,
+    sys::EspError,
     ws::client::{
         EspWebSocketClient, EspWebSocketClientConfig, FrameType, WebSocketEvent, WebSocketEventType,
     },
@@ -18,51 +19,92 @@ use esp_idf_svc::{
 use log::info;
 
 use crate::{
+    communication::{ChrononautsMessage, MessageError},
     consts::{self, CNT_WS_PREFIX},
-    event::MainEvent,
-    radio::ChrononautsMessage,
+    event::{MainEvent, WsTransmissionEvent},
     ChrononautsEventLoop,
 };
 
-/// The relevant events for this example as it connects to the server,
-/// sends a message, receives the same message, and closes the connection.
-#[derive(Debug)]
-pub enum ChrononautsWsEvent {
-    Connected,
-    MessageReceived(BoardMessage),
-    Closed,
+#[derive(Debug, thiserror::Error)]
+pub enum WsError {
+    #[error(transparent)]
+    EspIOError(#[from] EspIOError),
+    #[error(transparent)]
+    EspError(#[from] EspError),
+    #[error(transparent)]
+    MessageError(#[from] MessageError),
+    #[error("WebSocket not connected")]
+    WsNotConnected,
 }
 
-pub struct ChrononautsWebSocketClient<'a>(EspWebSocketClient<'a>);
+pub struct ChrononautsWebSocketClient {
+    client: Option<EspWebSocketClient<'static>>,
+    event_loop: ChrononautsEventLoop,
+}
 
-impl<'a> ChrononautsWebSocketClient<'a> {
+impl ChrononautsWebSocketClient {
     pub fn new(event_loop: ChrononautsEventLoop) -> Self {
-        let config = EspWebSocketClientConfig {
-            server_cert: Some(X509::pem_until_nul(consts::SERVER_ROOT_CERT)),
-            ..Default::default()
-        };
-        let timeout = Duration::from_secs(10);
+        Self {
+            client: None,
+            event_loop,
+        }
+    }
+
+    fn connect(&mut self) -> Result<(), WsError> {
+        let config = EspWebSocketClientConfig::default();
+        let timeout = Duration::from_secs(5);
         let uri = format!(
             "{}?password={}",
             consts::WEBSOCKET_URI,
             consts::BOARD_PASSWORD
         );
+        let event_loop = self.event_loop.clone();
         let client = EspWebSocketClient::new(&uri, &config, timeout, move |event| {
             handle_event(event_loop.clone(), event)
-        })
-        .unwrap();
-        Self(client)
+        })?;
+        self.client = Some(client);
+
+        Ok(())
     }
 
     pub fn is_connected(&self) -> bool {
-        self.0.is_connected()
+        if self.client.is_none() {
+            return false;
+        }
+        self.client.as_ref().unwrap().is_connected()
     }
 
-    pub fn send_message(&mut self, message: &str) {
-        info!("Websocket send, text: {}", message);
-        self.0
-            .send(FrameType::Text(false), message.as_bytes())
-            .unwrap();
+    pub fn send_message(&mut self, payload: &[u8]) -> Result<(), WsError> {
+        if !self.is_connected() {
+            return Err(WsError::WsNotConnected);
+        }
+        self.client
+            .as_mut()
+            .unwrap()
+            .send(FrameType::Text(false), payload)?;
+        Ok(())
+    }
+
+    pub fn run(&mut self) -> Result<(), WsError> {
+        block_on(pin!(async move {
+            let mut subscription = self.event_loop.subscribe_async::<WsTransmissionEvent>()?;
+            loop {
+                let event = subscription.recv().await?;
+
+                match event {
+                    WsTransmissionEvent::Send(msg) => {
+                        let Ok(board_msg) = BoardMessage::try_from(msg) else {
+                            log::error!("[{CNT_WS_PREFIX}] Failed to convert ChrononautsMessage to BoardMessage.");
+                            continue;
+                        };
+                        self.send_message(&serde_json::to_vec(&board_msg).unwrap())?;
+                    }
+                    WsTransmissionEvent::Connect => {
+                        self.connect()?;
+                    }
+                }
+            }
+        }))
     }
 }
 

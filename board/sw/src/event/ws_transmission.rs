@@ -1,37 +1,33 @@
-//! # Game Loop Event
+//! # Ws Event
 //!
-//! This event is triggered when the game level changes.
+//! This event is triggered when a message should be sent to the server.
 //!
 
-use backend_api::Level;
 use esp_idf_svc::eventloop::{
     EspEvent, EspEventDeserializer, EspEventPostData, EspEventSerializer, EspEventSource,
 };
 
-use crate::consts;
+use crate::{communication::ChrononautsMessage, consts};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Copy)]
-pub enum GameLoopEvent {
-    GameLevelChanged(Level),
-    SetLedBlinkSpeed(u8, u16),
-    SetLedState(u8, bool),
-    ButtonPressed,
-    ShowEncryptionKey,
+pub enum WsTransmissionEvent {
+    Send(ChrononautsMessage),
+    Connect,
 }
 
-unsafe impl EspEventSource for GameLoopEvent {
+unsafe impl EspEventSource for WsTransmissionEvent {
     fn source() -> Option<&'static core::ffi::CStr> {
-        Some(consts::GAME_LOOP_EVENT_BASE)
+        Some(consts::WS_TRANSMISSION_EVENT_BASE)
     }
 
     fn event_id() -> Option<i32> {
-        Some(consts::GAME_LOOP_EVENT_ID)
+        Some(consts::WS_TRANSMISSION_EVENT_ID)
     }
 }
 
-impl EspEventSerializer for GameLoopEvent {
-    type Data<'a> = GameLoopEvent;
+impl EspEventSerializer for WsTransmissionEvent {
+    type Data<'a> = WsTransmissionEvent;
 
     fn serialize<F, R>(event: &Self::Data<'_>, f: F) -> R
     where
@@ -41,11 +37,11 @@ impl EspEventSerializer for GameLoopEvent {
     }
 }
 
-impl EspEventDeserializer for GameLoopEvent {
-    type Data<'a> = GameLoopEvent;
+impl EspEventDeserializer for WsTransmissionEvent {
+    type Data<'a> = WsTransmissionEvent;
 
     fn deserialize<'a>(data: &EspEvent<'a>) -> Self::Data<'a> {
         // Just as easy as serializing
-        *unsafe { data.as_payload::<GameLoopEvent>() }
+        *unsafe { data.as_payload::<WsTransmissionEvent>() }
     }
 }

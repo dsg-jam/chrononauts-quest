@@ -17,21 +17,37 @@
 //! Figure 1: Overview of the Chrononauts Reliable Transport Protocol
 //!
 
-use std::{collections::VecDeque, time::Instant};
+use std::{
+    collections::VecDeque,
+    pin::pin,
+    sync::mpsc,
+    time::{Duration, Instant},
+};
 
-use esp_idf_svc::hal::delay;
+use esp_idf_svc::{
+    hal::{delay, task::block_on},
+    sys::EspError,
+    timer::EspTaskTimerService,
+};
 
-use crate::{consts, event::PacketTransmissionEvent, ChrononautsEventLoop, ChrononautsId};
-
-use super::{ChrononautsMessage, ChrononautsPacket};
+use crate::{
+    communication::{ChrononautsMessage, ChrononautsPacket},
+    consts,
+    event::{MainEvent, MessageTransmissionEvent, PacketReceptionEvent, PacketTransmissionEvent},
+    utils::ChrononautsId,
+    ChrononautsEventLoop,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransportError {
+    #[error(transparent)]
+    EspError(#[from] EspError),
     #[error("Duplicate packet")]
     DuplicatePacket,
 }
 
 pub struct ChrononautsTransport {
+    event_loop: ChrononautsEventLoop,
     sender: Sender,
     receiver: Receiver,
     source: ChrononautsId,
@@ -45,6 +61,7 @@ impl ChrononautsTransport {
         Self {
             sender: Sender::new(event_loop.clone()),
             receiver: Receiver::new(event_loop.clone()),
+            event_loop,
             source: chrononauts_id,
             destination: chrononauts_id.other(),
             next_sequence: 0,
@@ -71,10 +88,8 @@ impl ChrononautsTransport {
         package: ChrononautsPacket,
     ) -> Result<Option<ChrononautsMessage>, TransportError> {
         if package.is_ack() {
-            // Handle ACK
             self.sender.handle_ack(package)?;
         } else {
-            // Handle data package
             return self.receiver.handle_reception(package);
         }
         Ok(None)
@@ -83,6 +98,51 @@ impl ChrononautsTransport {
     pub fn handle_send(&mut self) -> Result<(), TransportError> {
         self.sender.handle_send()?;
         Ok(())
+    }
+
+    pub fn run(&mut self) -> Result<(), TransportError> {
+        let (packets_to_process_tx, packets_to_process_rx) = mpsc::channel::<ChrononautsPacket>();
+        let (messages_to_process_tx, messages_to_process_rx) =
+            mpsc::channel::<ChrononautsMessage>();
+
+        let _packet_reception_sub = self
+            .event_loop
+            .subscribe::<PacketReceptionEvent, _>(move |event| {
+                let PacketReceptionEvent::Packet(packet) = event;
+                packets_to_process_tx.send(packet).unwrap();
+            })
+            .unwrap();
+
+        let _message_transmission_sub = self
+            .event_loop
+            .subscribe::<MessageTransmissionEvent, _>(move |event| {
+                let MessageTransmissionEvent::Message(message) = event;
+                messages_to_process_tx.send(message).unwrap();
+            })
+            .unwrap();
+
+        let timer_service = EspTaskTimerService::new()?;
+
+        block_on(pin!(async move {
+            let mut async_timer = timer_service.timer_async()?;
+
+            loop {
+                if let Ok(packet) = packets_to_process_rx.try_recv() {
+                    if let Ok(Some(message)) = self.handle_reception(packet) {
+                        self.event_loop
+                            .post::<MainEvent>(&MainEvent::MessageReceived(message), delay::BLOCK)
+                            .unwrap();
+                    }
+                }
+                if let Ok(message) = messages_to_process_rx.try_recv() {
+                    self.enqueue_message(message).unwrap();
+                }
+
+                self.handle_send()?;
+
+                async_timer.after(Duration::from_millis(100)).await?;
+            }
+        }))
     }
 }
 
@@ -116,31 +176,6 @@ impl Sender {
             return Ok(());
         }
 
-        // Check if the timeout has been reached
-        if !self.window.is_empty()
-            && self.timeout.elapsed().as_millis() >= consts::TIMEOUT_MSEC as u128
-        {
-            // Resend the first package
-            let packet = self.window.front().unwrap();
-            log::info!(
-                "[TIMEOUT] Timeout reached - resending packet sequence {}",
-                packet.get_sequence()
-            );
-
-            // Send the packet via event loop
-            self.event_loop
-                .post::<PacketTransmissionEvent>(
-                    &PacketTransmissionEvent::Packet(*packet),
-                    delay::BLOCK,
-                )
-                .unwrap();
-
-            // Reset the timeout
-            self.timeout = Instant::now();
-
-            return Ok(());
-        }
-
         // Send next packets until the window is full
         while self.window.len() < consts::WINDOW_SIZE {
             // Check if the queue is empty
@@ -161,6 +196,35 @@ impl Sender {
 
             // Add the package to the window
             self.window.push_back(packet);
+
+            // Reset the timeout
+            self.timeout = Instant::now();
+        }
+
+        // Check if the timeout has been reached
+        if !self.window.is_empty()
+            && self.timeout.elapsed().as_millis() >= consts::TIMEOUT_MSEC as u128
+        {
+            // Resend the first package
+            let packet = self.window.front().unwrap();
+            log::info!(
+                "[TIMEOUT] Timeout reached - resending packet sequence {}",
+                packet.get_sequence()
+            );
+
+            // Send the packet via event loop
+
+            self.event_loop
+                .post::<PacketTransmissionEvent>(
+                    &PacketTransmissionEvent::Packet(*packet),
+                    delay::BLOCK,
+                )
+                .unwrap();
+
+            // Reset the timeout
+            self.timeout = Instant::now();
+
+            return Ok(());
         }
 
         Ok(())
@@ -226,13 +290,6 @@ impl Receiver {
         }
         */
 
-        // Check if the packet is a duplicate
-        if self.last_received_sequence.is_some()
-            && received_sequence == self.last_received_sequence.unwrap()
-        {
-            return Err(TransportError::DuplicatePacket);
-        }
-
         // Insert the packet into the window at the correct position
         // let position = (received_sequence.wrapping_sub(self.next_expected_sequence)) as usize;
 
@@ -265,6 +322,13 @@ impl Receiver {
                 delay::BLOCK,
             )
             .unwrap();
+
+        // Check if the packet is a duplicate
+        if self.last_received_sequence.is_some()
+            && received_sequence == self.last_received_sequence.unwrap()
+        {
+            return Ok(None);
+        }
 
         Ok(packet.get_payload())
     }

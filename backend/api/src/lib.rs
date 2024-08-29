@@ -53,7 +53,7 @@ pub enum WebMessage {
 }
 
 #[cfg(feature = "shared")]
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum DeviceId {
     Player1,

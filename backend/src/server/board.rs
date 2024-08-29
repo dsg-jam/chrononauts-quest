@@ -28,6 +28,8 @@ pub async fn serve(state: StateHandle, ws_stream: &mut WebSocketStream) -> anyho
                 let success = state.perform_labyrinth_action(&game_ref, action).await?;
                 if !success {
                     ws_stream.send_labyrinth_action_rejected().await?;
+                } else if state.labyrinth_solved(&game_ref).await? {
+                    state.complete_l4(&game_ref).await?;
                 }
             }
             Event::Message(api::BoardMessage::LogEntry(entry)) => {
