@@ -11,7 +11,10 @@ use std::{
     sync::{mpsc::Sender, Arc, Mutex},
 };
 
-use crate::{ChrononautsSSIDs, WifiCreds, WifiRunner};
+use crate::{
+    wifi::{WifiCreds, WifiRunner},
+    ChrononautsSSIDs,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ServerError {

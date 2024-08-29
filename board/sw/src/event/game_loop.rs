@@ -17,6 +17,7 @@ pub enum GameLoopEvent {
     SetLedBlinkSpeed(u8, u16),
     SetLedState(u8, bool),
     ButtonPressed,
+    ShowEncryptionKey,
 }
 
 unsafe impl EspEventSource for GameLoopEvent {

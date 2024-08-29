@@ -4,16 +4,11 @@
 //! The radio module consists of all required parts to exchange messages between two boards reliably.
 //!
 
-mod message;
-mod packet;
 mod transceiver;
 mod transport;
 
 use cc1101::Error;
 use esp_idf_svc::hal::spi::SpiError;
-pub use message::{ChrononautsMessage, MessageError, MessagePayload, MessageSource};
-pub use packet::ChrononautsPacket;
-use packet::PacketError;
 pub use transceiver::ChrononautsTransceiver;
 pub use transport::ChrononautsTransport;
 use transport::TransportError;
@@ -26,8 +21,6 @@ pub enum RadioError {
     RadioNotFound,
     #[error(transparent)]
     TransportError(#[from] TransportError),
-    #[error(transparent)]
-    PacketError(#[from] PacketError),
     #[error(transparent)]
     SpiError(#[from] Error<SpiError>),
     #[error(transparent)]

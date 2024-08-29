@@ -11,7 +11,6 @@ use esp_idf_svc::{
     hal::{delay, task::block_on},
     io::EspIOError,
     sys::EspError,
-    tls::X509,
     ws::client::{
         EspWebSocketClient, EspWebSocketClientConfig, FrameType, WebSocketEvent, WebSocketEventType,
     },
@@ -20,9 +19,9 @@ use esp_idf_svc::{
 use log::info;
 
 use crate::{
+    communication::{ChrononautsMessage, MessageError},
     consts::{self, CNT_WS_PREFIX},
     event::{MainEvent, WsTransmissionEvent},
-    radio::{ChrononautsMessage, MessageError},
     ChrononautsEventLoop,
 };
 
@@ -52,11 +51,8 @@ impl ChrononautsWebSocketClient {
     }
 
     fn connect(&mut self) -> Result<(), WsError> {
-        let config = EspWebSocketClientConfig {
-            server_cert: Some(X509::pem_until_nul(consts::SERVER_ROOT_CERT)),
-            ..Default::default()
-        };
-        let timeout = Duration::from_secs(10);
+        let config = EspWebSocketClientConfig::default();
+        let timeout = Duration::from_secs(5);
         let uri = format!(
             "{}?password={}",
             consts::WEBSOCKET_URI,
@@ -67,10 +63,6 @@ impl ChrononautsWebSocketClient {
             handle_event(event_loop.clone(), event)
         })?;
         self.client = Some(client);
-
-        if !self.is_connected() {
-            return Err(WsError::WsNotConnected);
-        }
 
         Ok(())
     }
@@ -101,7 +93,10 @@ impl ChrononautsWebSocketClient {
 
                 match event {
                     WsTransmissionEvent::Send(msg) => {
-                        let board_msg = BoardMessage::try_from(msg)?;
+                        let Ok(board_msg) = BoardMessage::try_from(msg) else {
+                            log::error!("[{CNT_WS_PREFIX}] Failed to convert ChrononautsMessage to BoardMessage.");
+                            continue;
+                        };
                         self.send_message(&serde_json::to_vec(&board_msg).unwrap())?;
                     }
                     WsTransmissionEvent::Connect => {

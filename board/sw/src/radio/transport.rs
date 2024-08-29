@@ -31,13 +31,12 @@ use esp_idf_svc::{
 };
 
 use crate::{
+    communication::{ChrononautsMessage, ChrononautsPacket},
     consts,
     event::{MainEvent, MessageTransmissionEvent, PacketReceptionEvent, PacketTransmissionEvent},
     utils::ChrononautsId,
     ChrononautsEventLoop,
 };
-
-use super::{ChrononautsMessage, ChrononautsPacket};
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransportError {
@@ -110,7 +109,6 @@ impl ChrononautsTransport {
             .event_loop
             .subscribe::<PacketReceptionEvent, _>(move |event| {
                 let PacketReceptionEvent::Packet(packet) = event;
-                log::info!("Packet reception event: {:?}", packet);
                 packets_to_process_tx.send(packet).unwrap();
             })
             .unwrap();
@@ -119,7 +117,6 @@ impl ChrononautsTransport {
             .event_loop
             .subscribe::<MessageTransmissionEvent, _>(move |event| {
                 let MessageTransmissionEvent::Message(message) = event;
-                log::info!("Message transmission event: {:?}", message);
                 messages_to_process_tx.send(message).unwrap();
             })
             .unwrap();
@@ -132,6 +129,7 @@ impl ChrononautsTransport {
             loop {
                 if let Ok(packet) = packets_to_process_rx.try_recv() {
                     if let Ok(Some(message)) = self.handle_reception(packet) {
+                        log::info!("Received message @ TRANSPORT LAYER");
                         self.event_loop
                             .post::<MainEvent>(&MainEvent::MessageReceived(message), delay::BLOCK)
                             .unwrap();
@@ -143,7 +141,7 @@ impl ChrononautsTransport {
 
                 self.handle_send()?;
 
-                async_timer.after(Duration::from_millis(20)).await?;
+                async_timer.after(Duration::from_millis(100)).await?;
             }
         }))
     }
@@ -179,31 +177,6 @@ impl Sender {
             return Ok(());
         }
 
-        // Check if the timeout has been reached
-        if !self.window.is_empty()
-            && self.timeout.elapsed().as_millis() >= consts::TIMEOUT_MSEC as u128
-        {
-            // Resend the first package
-            let packet = self.window.front().unwrap();
-            log::info!(
-                "[TIMEOUT] Timeout reached - resending packet sequence {}",
-                packet.get_sequence()
-            );
-
-            // Send the packet via event loop
-            self.event_loop
-                .post::<PacketTransmissionEvent>(
-                    &PacketTransmissionEvent::Packet(*packet),
-                    delay::BLOCK,
-                )
-                .unwrap();
-
-            // Reset the timeout
-            self.timeout = Instant::now();
-
-            return Ok(());
-        }
-
         // Send next packets until the window is full
         while self.window.len() < consts::WINDOW_SIZE {
             // Check if the queue is empty
@@ -224,6 +197,35 @@ impl Sender {
 
             // Add the package to the window
             self.window.push_back(packet);
+
+            // Reset the timeout
+            self.timeout = Instant::now();
+        }
+
+        // Check if the timeout has been reached
+        if !self.window.is_empty()
+            && self.timeout.elapsed().as_millis() >= consts::TIMEOUT_MSEC as u128
+        {
+            // Resend the first package
+            let packet = self.window.front().unwrap();
+            log::info!(
+                "[TIMEOUT] Timeout reached - resending packet sequence {}",
+                packet.get_sequence()
+            );
+
+            // Send the packet via event loop
+
+            self.event_loop
+                .post::<PacketTransmissionEvent>(
+                    &PacketTransmissionEvent::Packet(*packet),
+                    delay::BLOCK,
+                )
+                .unwrap();
+
+            // Reset the timeout
+            self.timeout = Instant::now();
+
+            return Ok(());
         }
 
         Ok(())
@@ -289,13 +291,6 @@ impl Receiver {
         }
         */
 
-        // Check if the packet is a duplicate
-        if self.last_received_sequence.is_some()
-            && received_sequence == self.last_received_sequence.unwrap()
-        {
-            return Err(TransportError::DuplicatePacket);
-        }
-
         // Insert the packet into the window at the correct position
         // let position = (received_sequence.wrapping_sub(self.next_expected_sequence)) as usize;
 
@@ -328,6 +323,13 @@ impl Receiver {
                 delay::BLOCK,
             )
             .unwrap();
+
+        // Check if the packet is a duplicate
+        if self.last_received_sequence.is_some()
+            && received_sequence == self.last_received_sequence.unwrap()
+        {
+            return Ok(None);
+        }
 
         Ok(packet.get_payload())
     }

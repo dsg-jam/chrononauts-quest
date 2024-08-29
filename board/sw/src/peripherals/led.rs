@@ -12,10 +12,10 @@ use esp_idf_svc::{
     },
     io::EspIOError,
     sys::EspError,
-    timer::EspTaskTimerService,
+    timer::{EspAsyncTimer, EspTaskTimerService},
 };
 
-use crate::{event::GameLoopEvent, ChrononautsEventLoop};
+use crate::{consts, event::GameLoopEvent, ChrononautsEventLoop};
 
 #[derive(Debug, thiserror::Error)]
 pub enum LedError {
@@ -84,14 +84,62 @@ where
         }
     }
 
+    /// Show a space between components (dot or dash)
+    ///
+    /// This is a 1 unit pause
+    async fn show_inter_component_pause(
+        &mut self,
+        async_timer: &mut EspAsyncTimer,
+    ) -> Result<(), LedError> {
+        self.set_low()?;
+        async_timer.after(Duration::from_millis(1000)).await?;
+        Ok(())
+    }
+
+    /// Show a space between letters
+    ///
+    /// This is a 3 units pause
+    async fn show_inter_letter_pause(
+        &mut self,
+        async_timer: &mut EspAsyncTimer,
+    ) -> Result<(), LedError> {
+        self.set_low()?;
+        async_timer.after(Duration::from_millis(2000)).await?;
+        Ok(())
+    }
+
+    async fn show_time_pulse(&mut self, async_timer: &mut EspAsyncTimer) -> Result<(), LedError> {
+        self.set_low()?;
+        async_timer.after(Duration::from_millis(400)).await?;
+        self.set_high()?;
+        async_timer.after(Duration::from_millis(200)).await?;
+        self.set_low()?;
+        async_timer.after(Duration::from_millis(400)).await?;
+        Ok(())
+    }
+
+    async fn show_dot(&mut self, async_timer: &mut EspAsyncTimer) -> Result<(), LedError> {
+        self.set_high()?;
+        async_timer.after(Duration::from_millis(1000)).await?;
+        Ok(())
+    }
+
+    async fn show_dash(&mut self, async_timer: &mut EspAsyncTimer) -> Result<(), LedError> {
+        self.set_high()?;
+        async_timer.after(Duration::from_millis(3000)).await?;
+        Ok(())
+    }
+
     pub fn run(&mut self) -> Result<(), LedError> {
         let game_level = Arc::new(Mutex::new(Level::L0));
         let blink_speed = Arc::new(Mutex::new(None));
         let expected_state = Arc::new(Mutex::new(false));
+        let show_encryption_key = Arc::new(Mutex::new(false));
         let _game_loop_sub = {
             let game_level = game_level.clone();
             let blink_speed = blink_speed.clone();
             let expected_state = expected_state.clone();
+            let show_encryption_key = show_encryption_key.clone();
             let self_led_number = self.led_number;
             self.event_loop
                 .subscribe::<GameLoopEvent, _>(move |event| match event {
@@ -110,6 +158,9 @@ where
                         }
                         *expected_state.lock().unwrap() = state;
                     }
+                    GameLoopEvent::ShowEncryptionKey => {
+                        *show_encryption_key.lock().unwrap() = true;
+                    }
                     _ => {}
                 })
                 .unwrap()
@@ -121,20 +172,64 @@ where
             loop {
                 let blink_speed = *blink_speed.lock().unwrap();
                 let game_level = *game_level.lock().unwrap();
-                match (game_level, blink_speed) {
-                    (Level::L2, Some(speed)) => {
-                        async_timer
-                            .after(Duration::from_millis(speed as u64))
-                            .await
-                            .unwrap();
-                        self.toggle()?;
-                        continue;
+                let show_l3 = *show_encryption_key.lock().unwrap();
+                *show_encryption_key.lock().unwrap() = false;
+                match game_level {
+                    Level::L2 => {
+                        if let Some(speed) = blink_speed {
+                            async_timer
+                                .after(Duration::from_millis(speed as u64))
+                                .await?;
+                            self.toggle()?;
+                            continue;
+                        }
                     }
-                    _ => {
-                        let expected_state = *expected_state.lock().unwrap();
-                        self.set_state(expected_state)?;
+                    Level::L3 => {
+                        if show_l3 {
+                            for c in consts::L3_ENCODED_KEY.chars() {
+                                if self.led_number == 1 {
+                                    match c {
+                                        '.' => {
+                                            self.show_dot(&mut async_timer).await?;
+                                            self.show_inter_component_pause(&mut async_timer)
+                                                .await?;
+                                        }
+                                        '-' => {
+                                            self.show_dash(&mut async_timer).await?;
+                                            self.show_inter_component_pause(&mut async_timer)
+                                                .await?;
+                                        }
+                                        _ => {
+                                            self.show_inter_letter_pause(&mut async_timer).await?;
+                                        }
+                                    }
+                                } else {
+                                    match c {
+                                        '.' => {
+                                            self.show_time_pulse(&mut async_timer).await?;
+                                            self.show_time_pulse(&mut async_timer).await?;
+                                        }
+                                        '-' => {
+                                            self.show_time_pulse(&mut async_timer).await?;
+                                            self.show_time_pulse(&mut async_timer).await?;
+                                            self.show_time_pulse(&mut async_timer).await?;
+                                            self.show_time_pulse(&mut async_timer).await?;
+                                        }
+                                        _ => {
+                                            self.show_time_pulse(&mut async_timer).await?;
+                                            self.show_time_pulse(&mut async_timer).await?;
+                                        }
+                                    }
+                                }
+                            }
+                            self.set_low()?;
+                            continue;
+                        }
                     }
+                    _ => {}
                 }
+                let expected_state = *expected_state.lock().unwrap();
+                self.set_state(expected_state)?;
                 async_timer.after(Duration::from_millis(100)).await.unwrap();
             }
         }))

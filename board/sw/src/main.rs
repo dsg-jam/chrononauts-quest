@@ -1,9 +1,12 @@
-use crate::captive::CaptivePortal;
-use consts::AP_IP_ADDRESS;
+use chrononauts_board::{
+    consts::AP_IP_ADDRESS, get_chrononauts_id, CaptivePortal, ChrononautsAccelerometer,
+    ChrononautsError, ChrononautsHttpServer, ChrononautsId, ChrononautsLed,
+    ChrononautsPotentiometer, ChrononautsSSIDs, ChrononautsTransceiver, ChrononautsTransport,
+    ChrononautsWebSocketClient, ChrononautsWifi, GameLoop, MainEvent, SimpleDns, WifiRunner,
+};
 use core::pin::pin;
-use dns::*;
 use esp_idf_svc::{
-    eventloop::{Background, EspBackgroundEventLoop, EspEventLoop, EspSystemEventLoop, User},
+    eventloop::{EspBackgroundEventLoop, EspSystemEventLoop},
     hal::{
         adc::oneshot::AdcDriver,
         delay::{self},
@@ -14,56 +17,21 @@ use esp_idf_svc::{
             config::{Config, DriverConfig},
             Dma, SpiDeviceDriver, SpiDriver,
         },
-        task::block_on,
+        task::{block_on, thread::ThreadSpawnConfiguration},
     },
     log::EspLogger,
     nvs::EspDefaultNvsPartition,
-    sys::{self, EspError},
+    sys,
     wifi::{AccessPointInfo, WifiDriver, WifiEvent},
 };
-use event::MainEvent;
-use game_loop::GameLoop;
-use http_server::ChrononautsHttpServer;
-use peripherals::{
-    ChrononautsAccelerometer, ChrononautsLed, ChrononautsPotentiometer, PeripheralError,
-};
+
 use std::{
     sync::{mpsc, Arc, Mutex},
     thread::{self, sleep},
     time::Duration,
 };
-use utils::ChrononautsId;
-use wifi::{WifiCreds, WifiRunner};
-use ws::ChrononautsWebSocketClient;
-
-mod captive;
-mod consts;
-mod dns;
-mod event;
-mod game_loop;
-mod http_server;
-mod peripherals;
-mod radio;
-mod utils;
-mod wifi;
-mod ws;
 
 use cc1101::Cc1101;
-
-#[derive(Debug, thiserror::Error)]
-pub enum ChrononautsError {
-    #[error("Invalid Chrononauts ID")]
-    InvalidChrononautsId,
-    #[error(transparent)]
-    EspError(#[from] EspError),
-    #[error(transparent)]
-    PeripheralError(#[from] PeripheralError),
-    #[error(transparent)]
-    WsError(#[from] ws::WsError),
-}
-
-type ChrononautsEventLoop = EspEventLoop<User<Background>>;
-type ChrononautsSSIDs = Arc<Mutex<Vec<AccessPointInfo>>>;
 
 fn main() -> Result<(), ChrononautsError> {
     unsafe {
@@ -81,7 +49,7 @@ fn run() -> Result<(), ChrononautsError> {
     // ########
     // # Init #
     // ########
-    let chrononauts_id = utils::get_chrononauts_id()?;
+    let chrononauts_id = get_chrononauts_id()?;
     log::info!("Chrononauts ID: {:?}", chrononauts_id);
 
     let system_event_loop = EspSystemEventLoop::take()?;
@@ -125,16 +93,24 @@ fn run() -> Result<(), ChrononautsError> {
     // ############################
     // # Wi-Fi connection handler #
     // ############################
+    ThreadSpawnConfiguration {
+        name: Some(b"wifi_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let _wifi_handler = if let ChrononautsId::L = chrononauts_id {
         let wifi_driver = WifiDriver::new(
             peripherals.modem,
             system_event_loop.clone(),
             EspDefaultNvsPartition::take().ok(),
-        )?;
+        )
+        .expect("Wi-Fi driver init failed");
         let mut chrononauts_wifi =
-            wifi::ChrononautsWifi::new(wifi_driver, wifi_runner_rx, wifi_available_ssids.clone())?;
+            ChrononautsWifi::new(wifi_driver, wifi_runner_rx, wifi_available_ssids.clone())
+                .expect("Wi-Fi init failed");
         Some(thread::spawn(move || {
-            chrononauts_wifi.run().unwrap();
+            chrononauts_wifi.run().expect("Wi-Fi runner failed");
         }))
     } else {
         None
@@ -143,6 +119,12 @@ fn run() -> Result<(), ChrononautsError> {
     // ######################
     // # DNS server handler #
     // ######################
+    ThreadSpawnConfiguration {
+        name: Some(b"dns_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let _dns_handler = if let ChrononautsId::L = chrononauts_id {
         let mut dns = SimpleDns::try_new(AP_IP_ADDRESS).expect("DNS server init failed");
         Some(thread::spawn(move || loop {
@@ -156,20 +138,37 @@ fn run() -> Result<(), ChrononautsError> {
     // #############################
     // # Radio transceiver handler #
     // #############################
-    let mut radio_transceiver =
-        radio::ChrononautsTransceiver::new(cc1101, chrononauts_event_loop.clone());
+    ThreadSpawnConfiguration {
+        name: Some(b"radio_transceiver_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
+    let mut radio_transceiver = ChrononautsTransceiver::new(cc1101, chrononauts_event_loop.clone());
     let _radio_transceiver_handler = thread::spawn(move || radio_transceiver.run(chrononauts_id));
 
     // ###########################
     // # Radio transport handler #
     // ###########################
+    ThreadSpawnConfiguration {
+        name: Some(b"radio_transport_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let mut radio_transport =
-        radio::ChrononautsTransport::new(chrononauts_event_loop.clone(), chrononauts_id);
+        ChrononautsTransport::new(chrononauts_event_loop.clone(), chrononauts_id);
     let _radio_transport_handler = { thread::spawn(move || radio_transport.run()) };
 
     // #######################
     // # HTTP server handler #
     // #######################
+    ThreadSpawnConfiguration {
+        name: Some(b"http_server_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let _http_server_handler = if let ChrononautsId::L = chrononauts_id {
         let mut http_server =
             ChrononautsHttpServer::new(wifi_runner_tx.clone(), wifi_available_ssids);
@@ -185,6 +184,12 @@ fn run() -> Result<(), ChrononautsError> {
     // ############################
     // # WebSocket client handler #
     // ############################
+    ThreadSpawnConfiguration {
+        name: Some(b"ws_client_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let _ws_client_handler = if let ChrononautsId::L = chrononauts_id {
         let mut ws_client = ChrononautsWebSocketClient::new(chrononauts_event_loop.clone());
         Some(thread::spawn(move || ws_client.run()))
@@ -195,6 +200,12 @@ fn run() -> Result<(), ChrononautsError> {
     // ########################
     // # Button Press Handler #
     // ########################
+    ThreadSpawnConfiguration {
+        name: Some(b"button_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let _button_subscription_handler = {
         let chrononauts_event_loop = chrononauts_event_loop.clone();
         thread::spawn(|| {
@@ -210,6 +221,7 @@ fn run() -> Result<(), ChrononautsError> {
                         .post_async::<MainEvent>(&MainEvent::ButtonChanged(true))
                         .await
                         .unwrap();
+                    sleep(Duration::from_millis(50));
                 }
             }))
         })
@@ -243,6 +255,12 @@ fn run() -> Result<(), ChrononautsError> {
     // #########################
     // # Potentiometer handler #
     // #########################
+    ThreadSpawnConfiguration {
+        name: Some(b"poti_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let mut potentiometer = ChrononautsPotentiometer::new(poti_adc, chrononauts_event_loop.clone())
         .expect("Potentiometer init failed");
     let _turning_knob_handler = { thread::spawn(move || potentiometer.run(pins.gpio0)) };
@@ -250,9 +268,21 @@ fn run() -> Result<(), ChrononautsError> {
     // ################
     // # LEDs handler #
     // ################
+    ThreadSpawnConfiguration {
+        name: Some(b"led1_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let mut led1 =
         ChrononautsLed::new(led1, 1, chrononauts_event_loop.clone()).expect("LED1 init failed");
     let _led1_handler = thread::spawn(move || led1.run());
+    ThreadSpawnConfiguration {
+        name: Some(b"led2_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let mut led2 =
         ChrononautsLed::new(led2, 2, chrononauts_event_loop.clone()).expect("LED2 init failed");
     let _led2_handler = thread::spawn(move || led2.run());
@@ -260,6 +290,12 @@ fn run() -> Result<(), ChrononautsError> {
     // #########################
     // # Accelerometer handler #
     // #########################
+    ThreadSpawnConfiguration {
+        name: Some(b"accelerometer_thread\0"),
+        ..Default::default()
+    }
+    .set()
+    .unwrap();
     let mut accelerometer =
         ChrononautsAccelerometer::new(i2c_driver, chrononauts_event_loop.clone());
     let _accelerometer_handler = thread::spawn(move || accelerometer.run());

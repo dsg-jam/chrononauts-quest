@@ -121,6 +121,7 @@ impl<'a> ChrononautsWifi<'a> {
         while let Ok(event) = self.runner_rx.recv() {
             match event {
                 WifiRunner::ChangeWifi(creds) => {
+                    log::info!("Changing Wi-Fi to {:?}", creds);
                     self.change_wifi(creds)?;
                 }
                 WifiRunner::GetWifi => {

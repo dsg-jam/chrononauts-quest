@@ -15,7 +15,7 @@ pub use packet_reception::PacketReceptionEvent;
 pub use packet_transmission::PacketTransmissionEvent;
 pub use ws_transmission::WsTransmissionEvent;
 
-use crate::{consts, radio::ChrononautsMessage};
+use crate::{communication::ChrononautsMessage, consts};
 
 // Main event
 #[allow(dead_code)]

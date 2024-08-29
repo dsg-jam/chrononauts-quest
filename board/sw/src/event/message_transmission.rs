@@ -8,7 +8,7 @@ use esp_idf_svc::eventloop::{
     EspEvent, EspEventDeserializer, EspEventPostData, EspEventSerializer, EspEventSource,
 };
 
-use crate::{consts, radio::ChrononautsMessage};
+use crate::{communication::ChrononautsMessage, consts};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Copy)]

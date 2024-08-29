@@ -22,6 +22,7 @@ use esp_idf_svc::{
 };
 
 use crate::{
+    consts,
     event::{GameLoopEvent, MainEvent},
     ChrononautsEventLoop,
 };
@@ -63,7 +64,11 @@ where
             self.event_loop
                 .subscribe::<GameLoopEvent, _>(move |event| {
                     if let GameLoopEvent::GameLevelChanged(level) = event {
-                        *game_level.lock().unwrap() = level;
+                        if let Ok(mut game_level) = game_level.lock() {
+                            *game_level = level;
+                        } else {
+                            log::error!("Failed to lock game level");
+                        }
                     }
                 })
                 .unwrap()
@@ -77,16 +82,19 @@ where
                 calibration: true,
                 ..Default::default()
             };
-            let mut poti = AdcChannelDriver::new(&self.adc, adc_pin, &config).unwrap();
+            let mut poti = AdcChannelDriver::new(&self.adc, adc_pin, &config)?;
             loop {
                 let game_level = *game_level.lock().unwrap();
                 if game_level == Level::L2 {
-                    let poti_value = self.adc.read(&mut poti).unwrap().saturating_add(100);
-                    self.event_loop
-                        .post::<MainEvent>(&MainEvent::PotentiometerValueChanged(poti_value), BLOCK)
-                        .unwrap();
+                    let poti_value = self.adc.read(&mut poti)?;
+                    self.event_loop.post::<MainEvent>(
+                        &MainEvent::PotentiometerValueChanged(poti_value),
+                        BLOCK,
+                    )?;
                 }
-                async_timer.after(Duration::from_millis(100)).await.unwrap();
+                async_timer
+                    .after(Duration::from_millis(consts::POTI_SAMPLING_RATE_MS))
+                    .await?;
             }
         }))
     }

@@ -10,8 +10,9 @@ use esp_idf_svc::{
     timer::EspTaskTimerService,
 };
 
-use super::{ChrononautsPacket, RadioError};
+use super::RadioError;
 use crate::{
+    communication::ChrononautsPacket,
     consts,
     event::{PacketReceptionEvent, PacketTransmissionEvent},
     utils::ChrononautsId,
@@ -150,8 +151,9 @@ impl<'a> ChrononautsTransceiver<'a> {
     fn get_packet(&mut self) -> Result<ChrononautsPacket, RadioError> {
         let mut buf = [0; consts::MAX_PACKET_SIZE];
         let mut length = 0u8;
-        let ret = self.radio.receive(&mut length, &mut buf)?;
+        let _ret = self.radio.receive(&mut length, &mut buf)?;
 
+        /*
         // from TI app note
         let rssi_dec = ret[0] as i16;
         let rssi_offset = 74;
@@ -161,8 +163,9 @@ impl<'a> ChrononautsTransceiver<'a> {
             (rssi_dec / 2) - rssi_offset
         };
 
-        log::info!("RSSI: {:?}", rssi_dbm);
-        log::info!("LQI: {:?}", ret[1] & 0x7F);
+        //log::info!("RSSI: {:?}", rssi_dbm);
+        //log::info!("LQI: {:?}", ret[1] & 0x7F);
+        */
 
         self.radio.set_idle_state()?;
         self.radio.flush_rx_fifo_buffer()?;
@@ -179,7 +182,6 @@ impl<'a> ChrononautsTransceiver<'a> {
             .event_loop
             .subscribe::<PacketTransmissionEvent, _>(move |event| {
                 let PacketTransmissionEvent::Packet(packet) = event;
-                log::info!("Packet transmission event: {:?}", packet);
                 packets_to_send_tx.send(packet).unwrap();
             })
             .unwrap();
@@ -190,6 +192,7 @@ impl<'a> ChrononautsTransceiver<'a> {
             let mut async_timer = timer_service.timer_async()?;
             loop {
                 if let Ok(packet) = self.get_packet() {
+                    log::info!("Received packet @ RADIO");
                     if packet.matches_destination(chrononauts_id.into()) {
                         self.event_loop
                             .post::<PacketReceptionEvent>(
@@ -201,12 +204,13 @@ impl<'a> ChrononautsTransceiver<'a> {
                 }
 
                 if let Ok(packet) = packets_to_send_rx.try_recv() {
+                    log::info!("Sending packet @ RADIO");
                     if self.send_packet(&packet).is_err() {
                         log::error!("Failed to send packet");
                     }
                 }
 
-                async_timer.after(Duration::from_millis(20)).await?;
+                async_timer.after(Duration::from_millis(100)).await?;
             }
         }))
     }

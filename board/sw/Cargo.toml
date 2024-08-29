@@ -1,5 +1,5 @@
 [package]
-name = "chrononauts-board"
+name = "chrononauts_board"
 version = "0.1.0"
 authors = ["Simon Berger <simon@siku2.io>", "Kevin Schaerer <kevin@schaerer.dev>"]
 edition = "2021"
@@ -34,7 +34,13 @@ serde_json = "1.0.127"
 embuild = { version = "0.32", features = ["espidf"] }
 
 [[bin]]
-name = "chrononauts-board"
+name = "chrononauts_board"
+path = "src/main.rs"
+harness = false
+
+[lib]
+name = "chrononauts_board"
+path = "src/lib.rs"
 harness = false
 
 [[package.metadata.esp-idf-sys.extra_components]]

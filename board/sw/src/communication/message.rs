@@ -51,6 +51,16 @@ pub enum MessagePayload {
     /// The payload is the action to be performed in the labyrinth.
     /// This message is only sent in [`Level::L4`].
     LabyrinthAction(backend_api::labyrinth::Action),
+    /// This message is ONLY sent from the non-WiFi board to the WiFi board.
+    ///
+    /// The payload is the value of the potentiometer.
+    LedSpeed(u16),
+    /// This message is ONLY sent from the WiFi board to the backend upon completion of `Level::L2`.
+    FrequencyTuned,
+    /// This message is ONLY sent between the boards in `Level::L3`.
+    ///
+    /// It triggers to show the encryption key on the LEDs on the opposite board
+    ShowEncryptionKey,
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
@@ -101,6 +111,7 @@ impl TryFrom<ChrononautsMessage> for BoardMessage {
     fn try_from(chrononauts_msg: ChrononautsMessage) -> Result<Self, Self::Error> {
         match chrononauts_msg.payload {
             MessagePayload::LabyrinthAction(action) => Ok(BoardMessage::LabyrinthAction(action)),
+            MessagePayload::FrequencyTuned => Ok(BoardMessage::FrequencyTuned),
             _ => Err(MessageError::InvalidBoardMessageFromBoard),
         }
     }
