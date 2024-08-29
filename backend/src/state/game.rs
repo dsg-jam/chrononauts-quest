@@ -11,6 +11,8 @@ use futures::{FutureExt, Stream, StreamExt};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
+use crate::labyrinth::LabyrinthMap;
+
 use super::GAME_LISTENER;
 
 #[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
@@ -43,6 +45,8 @@ pub struct Labyrinth {
     pub player1: Option<api::labyrinth::PlayerState>,
     #[serde(default)]
     pub player2: Option<api::labyrinth::PlayerState>,
+    #[serde(default)]
+    map: LabyrinthMap,
 }
 
 impl Game {
@@ -242,11 +246,11 @@ impl Game {
             let p1 = self
                 .labyrinth
                 .player1
-                .get_or_insert(crate::labyrinth::PLAYER1_START_STATE);
+                .get_or_insert(self.labyrinth.map.player1_start_state.clone());
             let p2 = self
                 .labyrinth
                 .player2
-                .get_or_insert(crate::labyrinth::PLAYER2_START_STATE);
+                .get_or_insert(self.labyrinth.map.player2_start_state.clone());
             match action.device {
                 api::DeviceId::Player1 => p1,
                 api::DeviceId::Player2 => p2,
@@ -260,20 +264,10 @@ impl Game {
 
         // TODO reject moves that go out of bounds or collide with a wall
         let pos = &mut player_state.position;
-        match action.direction {
-            api::labyrinth::Direction::Up => {
-                pos.y = pos.y.saturating_sub(1);
-            }
-            api::labyrinth::Direction::Down => {
-                pos.y = pos.y.saturating_add(1);
-            }
-            api::labyrinth::Direction::Left => {
-                pos.x = pos.x.saturating_sub(1);
-            }
-            api::labyrinth::Direction::Right => {
-                pos.x = pos.x.saturating_add(1);
-            }
-        }
+        let Some(new_pos) = self.labyrinth.map.try_move(pos.clone(), action.direction) else {
+            return false;
+        };
+        *pos = new_pos;
         true
     }
 
