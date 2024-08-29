@@ -1,6 +1,6 @@
 import { safeJsonParse } from "@/utils/json";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
 
 export type Level = "L0" | "L1" | "L2" | "L3" | "L4";
 
@@ -23,11 +23,11 @@ type MsgGameState = {
 
 export class BackendConnection {
   private ws: WebSocket;
-  private level: Level;
+  private level: Level | null;
 
   constructor(ws: WebSocket) {
     this.ws = ws;
-    this.level = "L0";
+    this.level = null;
 
     ws.addEventListener("open", (event) => {
       console.info("open", event);
@@ -58,8 +58,8 @@ export class BackendConnection {
     return connection;
   }
 
-  getLevel(): Level | null {
-    return this.level;
+  getLevel(): Level {
+    return this.level ?? "L0";
   }
 
   private setLevel(level: Level): void {
@@ -78,8 +78,8 @@ export class BackendConnection {
       const onError = () => {
         reject(new Error("Connection error"));
       };
-      const onAbort = (reason: any) => {
-        reject(reason);
+      const onAbort = () => {
+        reject(abort.reason);
       };
 
       this.ws.addEventListener("open", onOpen);
