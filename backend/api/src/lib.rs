@@ -25,6 +25,10 @@ pub enum BoardMessage {
     ///
     /// This is designed to be used for telemetry and debugging purposes.
     LogEntry(LogEntry),
+    /// Sent by the board to indicate the connection status of the other board.
+    ///
+    /// This message is sent whenever the connection status changes.
+    ConnectionStatus(ConnectionStatus),
 }
 
 /// Message sent to or from the website.
@@ -64,6 +68,12 @@ pub struct LogEntry {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     // add more fields as needed, the backend will store them
+}
+
+#[cfg(feature = "board")]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ConnectionStatus {
+    pub connected: bool,
 }
 
 #[cfg(feature = "shared")]

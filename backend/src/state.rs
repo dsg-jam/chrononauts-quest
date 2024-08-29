@@ -76,4 +76,20 @@ impl StateHandle {
     pub async fn _complete_l4(&self, game_ref: &FirestoreReference) -> FirestoreResult<()> {
         Game::complete_l4(&self.db, game_ref).await
     }
+
+    pub async fn set_board1_connected(
+        &self,
+        game_ref: &FirestoreReference,
+        connected: bool,
+    ) -> FirestoreResult<()> {
+        Game::set_board1_connected(&self.db, game_ref, connected).await
+    }
+
+    pub async fn set_board2_connected(
+        &self,
+        game_ref: &FirestoreReference,
+        connected: bool,
+    ) -> FirestoreResult<()> {
+        Game::set_board2_connected(&self.db, game_ref, connected).await
+    }
 }

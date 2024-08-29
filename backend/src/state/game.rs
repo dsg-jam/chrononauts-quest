@@ -34,6 +34,10 @@ pub struct Game {
     #[serde(default, with = "firestore::serialize_as_optional_timestamp")]
     l4_completed_at: Option<DateTime<Utc>>,
     #[serde(default)]
+    board1_connected: bool,
+    #[serde(default)]
+    board2_connected: bool,
+    #[serde(default)]
     labyrinth: Labyrinth,
 }
 
@@ -327,6 +331,40 @@ impl Game {
             paths!(Game::{l4_completed_at}).as_slice(),
             &Game {
                 l4_completed_at: Some(Utc::now()),
+                ..Default::default()
+            },
+        )
+        .await
+    }
+
+    pub(super) async fn set_board1_connected(
+        db: &FirestoreDb,
+        game_ref: &FirestoreReference,
+        connected: bool,
+    ) -> FirestoreResult<()> {
+        Self::update_fields(
+            db,
+            game_ref,
+            paths!(Game::{board1_connected}).as_slice(),
+            &Game {
+                board1_connected: connected,
+                ..Default::default()
+            },
+        )
+        .await
+    }
+
+    pub(super) async fn set_board2_connected(
+        db: &FirestoreDb,
+        game_ref: &FirestoreReference,
+        connected: bool,
+    ) -> FirestoreResult<()> {
+        Self::update_fields(
+            db,
+            game_ref,
+            paths!(Game::{board2_connected}).as_slice(),
+            &Game {
+                board2_connected: connected,
                 ..Default::default()
             },
         )

@@ -13,6 +13,8 @@ pub async fn serve(state: StateHandle, ws_stream: &mut WebSocketStream) -> anyho
 
     let mut last_api_game = None;
 
+    state.set_board1_connected(&game_ref, true).await?;
+
     loop {
         let event = tokio::select! {
             msg = ws_stream.recv_board_msg() => msg.map_or(Event::Stop, Event::Message),
@@ -30,6 +32,11 @@ pub async fn serve(state: StateHandle, ws_stream: &mut WebSocketStream) -> anyho
             }
             Event::Message(api::BoardMessage::LogEntry(entry)) => {
                 tracing::info!(?entry, "received log entry");
+            }
+            Event::Message(api::BoardMessage::ConnectionStatus(connected)) => {
+                state
+                    .set_board2_connected(&game_ref, connected.connected)
+                    .await?;
             }
             Event::Message(msg) => {
                 tracing::warn!(?msg, "ignoring unexpected message");
@@ -50,6 +57,8 @@ pub async fn serve(state: StateHandle, ws_stream: &mut WebSocketStream) -> anyho
             Event::Stop => break,
         }
     }
+    state.set_board1_connected(&game_ref, false).await?;
+    state.set_board2_connected(&game_ref, false).await?;
     tracing::warn!("stopping");
     Ok(())
 }
