@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 pub enum MessageError {
     #[error("Invalid board message from backend")]
     InvalidBoardMessageFromBackend,
+    #[error("Invalid board message from board")]
+    InvalidBoardMessageFromBoard,
 }
 
 /// The source of the message.
@@ -44,6 +46,21 @@ pub enum MessagePayload {
     ///
     /// The payload is the game level that the board should set.
     SetGameLevel(backend_api::Level),
+    /// This message is sent EITHER by the board connected to WiFi OR the backend.
+    ///
+    /// The payload is the action to be performed in the labyrinth.
+    /// This message is only sent in [`Level::L4`].
+    LabyrinthAction(backend_api::labyrinth::Action),
+    /// This message is ONLY sent from the non-WiFi board to the WiFi board.
+    ///
+    /// The payload is the value of the potentiometer.
+    LedSpeed(u16),
+    /// This message is ONLY sent from the WiFi board to the backend upon completion of `Level::L2`.
+    FrequencyTuned,
+    /// This message is ONLY sent between the boards in `Level::L3`.
+    ///
+    /// It triggers to show the encryption key on the LEDs on the opposite board
+    ShowEncryptionKey,
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
@@ -59,6 +76,10 @@ impl ChrononautsMessage {
 
     pub fn new_from_board(payload: MessagePayload) -> Self {
         Self::new(MessageSource::Board, payload)
+    }
+
+    pub fn change_source(&mut self, source: MessageSource) {
+        self.source = source;
     }
 
     pub fn source(&self) -> MessageSource {
@@ -80,6 +101,18 @@ impl TryFrom<BoardMessage> for ChrononautsMessage {
                 MessagePayload::SetGameLevel(game_state.level),
             )),
             _ => Err(MessageError::InvalidBoardMessageFromBackend),
+        }
+    }
+}
+
+impl TryFrom<ChrononautsMessage> for BoardMessage {
+    type Error = MessageError;
+
+    fn try_from(chrononauts_msg: ChrononautsMessage) -> Result<Self, Self::Error> {
+        match chrononauts_msg.payload {
+            MessagePayload::LabyrinthAction(action) => Ok(BoardMessage::LabyrinthAction(action)),
+            MessagePayload::FrequencyTuned => Ok(BoardMessage::FrequencyTuned),
+            _ => Err(MessageError::InvalidBoardMessageFromBoard),
         }
     }
 }

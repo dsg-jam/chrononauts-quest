@@ -14,7 +14,7 @@ pub enum Direction {
 
 /// See [`BoardMessage::LabyrinthAction`](crate::BoardMessage::LabyrinthAction).
 #[cfg(feature = "board")]
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Action {
     /// Which device is taking the action.
     pub device: DeviceId,
