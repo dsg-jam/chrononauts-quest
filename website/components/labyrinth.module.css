@@ -11,8 +11,17 @@
   top: calc(var(--y) * 2ch);
 }
 
+.wall {
+  opacity: 1;
+  transition: opacity 0.1s;
+}
+
 .wall::before {
   content: "#";
+}
+
+.wall.invisible {
+  opacity: 0;
 }
 
 .player.p1 {

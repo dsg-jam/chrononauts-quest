@@ -27,6 +27,8 @@ export default {
     rootEl.style.setProperty("--width", labyrinthWidth.toString());
     rootEl.style.setProperty("--height", labyrinthHeight.toString());
 
+    const wallElByPosition = new Map<string, HTMLElement>();
+
     for (const { x, y } of wallPositions) {
       const wallEl = document.createElement("div");
       wallEl.classList.add(styles.wall);
@@ -35,7 +37,14 @@ export default {
       wallEl.style.setProperty("--x", x.toString());
       wallEl.style.setProperty("--y", y.toString());
       rootEl.appendChild(wallEl);
+
+      wallElByPosition.set(`${x},${y}`, wallEl);
+
       await sleep(5, terminal.abort);
+      // if this isn't a border wall, make it invisible
+      if (x > 0 && x < labyrinthWidth - 1 && y > 0 && y < labyrinthHeight - 1) {
+        wallEl.classList.add(styles.invisible);
+      }
     }
 
     const player1El = buildPlayerEl("player1");
@@ -44,10 +53,27 @@ export default {
     const player2El = buildPlayerEl("player2");
     rootEl.appendChild(player2El);
 
+    const showWallsAround = (
+      { x, y }: { x: number; y: number },
+      radius: number,
+    ): void => {
+      for (let i = -radius; i <= radius; i++) {
+        for (let j = -radius; j <= radius; j++) {
+          const wallEl = wallElByPosition.get(`${x + i},${y + j}`);
+          if (wallEl) {
+            wallEl.classList.remove(styles.invisible);
+          }
+        }
+      }
+    };
+
     while (true) {
       const state = backend.getLabyrinth();
       updatePlayerEl(player1El, state.player1);
       updatePlayerEl(player2El, state.player2);
+
+      showWallsAround(state.player1.position, 2);
+      showWallsAround(state.player2.position, 2);
 
       if (backend.getLevel() !== "L4") {
         break;
