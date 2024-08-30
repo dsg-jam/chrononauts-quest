@@ -1,7 +1,7 @@
 import { BackendConnection, LoginCredentials } from "./backend";
+import { skipBootAnimation } from "./game";
 import { Terminal } from "@/components/terminal";
 import { safeJsonParse, safeJsonStringify } from "@/utils/json";
-import { skipBootAnimation } from "./game";
 
 export async function boot(terminal: Terminal): Promise<void> {
   terminal.clear();
