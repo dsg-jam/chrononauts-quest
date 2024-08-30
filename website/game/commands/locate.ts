@@ -62,7 +62,9 @@ export default {
       return;
     }
 
-    await terminal.type("Device located!", { lineEndDelay: 2000 });
+    await terminal.type("Devices in temporal alignment!", {
+      lineEndDelay: 2000,
+    });
     await showGameComplete(terminal);
   },
 } as Command;

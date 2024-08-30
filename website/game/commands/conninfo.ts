@@ -25,7 +25,7 @@ export default {
           "SYNC: N/A",
           "",
           "Frequency mismatch.",
-          "Communication corrupted.",
+          "Communication corrupted. Frequency must be manually tuned.",
         ]);
         break;
       // players haven't decoded encryption key yet
@@ -39,7 +39,7 @@ export default {
           "Encryption code might be invalid. Use 'decrypt' command to update it.",
         ]);
         break;
-      default:
+      case "L4":
         await terminal.type([
           "D1: detected",
           "D2: detected",
@@ -47,6 +47,17 @@ export default {
           "",
           "Connection established.",
         ]);
+        break;
+      case "FINISH":
+        await terminal.type([
+          "D1: detected",
+          "D2: detected",
+          "SYNC: complete",
+          "",
+          "Connection established and temporally aligned.",
+          "Game complete. Thank you for playing!",
+        ]);
+        break;
     }
   },
 } as Command;

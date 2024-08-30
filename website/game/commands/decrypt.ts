@@ -2,7 +2,7 @@ import { Command } from ".";
 
 export default {
   name: "decrypt",
-  description: "Set encryption key for device communication",
+  description: "Manually set encryption key for device communication",
   async execute({ terminal, backend, args }): Promise<void> {
     const key = args[0];
     if (!key) {
