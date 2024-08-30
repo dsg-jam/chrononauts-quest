@@ -71,7 +71,7 @@ pub struct LogEntry {
 }
 
 #[cfg(feature = "board")]
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ConnectionStatus {
     pub connected: bool,
 }

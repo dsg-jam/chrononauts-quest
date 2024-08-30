@@ -17,11 +17,12 @@ use esp_idf_svc::{
             config::{Config, DriverConfig},
             Dma, SpiDeviceDriver, SpiDriver,
         },
-        task::{block_on, thread::ThreadSpawnConfiguration},
+        task::block_on,
     },
     log::EspLogger,
     nvs::EspDefaultNvsPartition,
     sys,
+    timer::EspTaskTimerService,
     wifi::{AccessPointInfo, WifiDriver, WifiEvent},
 };
 
@@ -93,12 +94,6 @@ fn run() -> Result<(), ChrononautsError> {
     // ############################
     // # Wi-Fi connection handler #
     // ############################
-    ThreadSpawnConfiguration {
-        name: Some(b"wifi_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let _wifi_handler = if let ChrononautsId::L = chrononauts_id {
         let wifi_driver = WifiDriver::new(
             peripherals.modem,
@@ -119,12 +114,6 @@ fn run() -> Result<(), ChrononautsError> {
     // ######################
     // # DNS server handler #
     // ######################
-    ThreadSpawnConfiguration {
-        name: Some(b"dns_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let _dns_handler = if let ChrononautsId::L = chrononauts_id {
         let mut dns = SimpleDns::try_new(AP_IP_ADDRESS).expect("DNS server init failed");
         Some(thread::spawn(move || loop {
@@ -138,24 +127,12 @@ fn run() -> Result<(), ChrononautsError> {
     // #############################
     // # Radio transceiver handler #
     // #############################
-    ThreadSpawnConfiguration {
-        name: Some(b"radio_transceiver_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let mut radio_transceiver = ChrononautsTransceiver::new(cc1101, chrononauts_event_loop.clone());
     let _radio_transceiver_handler = thread::spawn(move || radio_transceiver.run(chrononauts_id));
 
     // ###########################
     // # Radio transport handler #
     // ###########################
-    ThreadSpawnConfiguration {
-        name: Some(b"radio_transport_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let mut radio_transport =
         ChrononautsTransport::new(chrononauts_event_loop.clone(), chrononauts_id);
     let _radio_transport_handler = { thread::spawn(move || radio_transport.run()) };
@@ -163,12 +140,6 @@ fn run() -> Result<(), ChrononautsError> {
     // #######################
     // # HTTP server handler #
     // #######################
-    ThreadSpawnConfiguration {
-        name: Some(b"http_server_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let _http_server_handler = if let ChrononautsId::L = chrononauts_id {
         let mut http_server =
             ChrononautsHttpServer::new(wifi_runner_tx.clone(), wifi_available_ssids);
@@ -184,12 +155,6 @@ fn run() -> Result<(), ChrononautsError> {
     // ############################
     // # WebSocket client handler #
     // ############################
-    ThreadSpawnConfiguration {
-        name: Some(b"ws_client_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let _ws_client_handler = if let ChrononautsId::L = chrononauts_id {
         let mut ws_client = ChrononautsWebSocketClient::new(chrononauts_event_loop.clone());
         Some(thread::spawn(move || ws_client.run()))
@@ -200,12 +165,6 @@ fn run() -> Result<(), ChrononautsError> {
     // ########################
     // # Button Press Handler #
     // ########################
-    ThreadSpawnConfiguration {
-        name: Some(b"button_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let _button_subscription_handler = {
         let chrononauts_event_loop = chrononauts_event_loop.clone();
         thread::spawn(|| {
@@ -255,12 +214,6 @@ fn run() -> Result<(), ChrononautsError> {
     // #########################
     // # Potentiometer handler #
     // #########################
-    ThreadSpawnConfiguration {
-        name: Some(b"poti_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let mut potentiometer = ChrononautsPotentiometer::new(poti_adc, chrononauts_event_loop.clone())
         .expect("Potentiometer init failed");
     let _turning_knob_handler = { thread::spawn(move || potentiometer.run(pins.gpio0)) };
@@ -268,21 +221,9 @@ fn run() -> Result<(), ChrononautsError> {
     // ################
     // # LEDs handler #
     // ################
-    ThreadSpawnConfiguration {
-        name: Some(b"led1_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let mut led1 =
         ChrononautsLed::new(led1, 1, chrononauts_event_loop.clone()).expect("LED1 init failed");
     let _led1_handler = thread::spawn(move || led1.run());
-    ThreadSpawnConfiguration {
-        name: Some(b"led2_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let mut led2 =
         ChrononautsLed::new(led2, 2, chrononauts_event_loop.clone()).expect("LED2 init failed");
     let _led2_handler = thread::spawn(move || led2.run());
@@ -290,15 +231,31 @@ fn run() -> Result<(), ChrononautsError> {
     // #########################
     // # Accelerometer handler #
     // #########################
-    ThreadSpawnConfiguration {
-        name: Some(b"accelerometer_thread\0"),
-        ..Default::default()
-    }
-    .set()
-    .unwrap();
     let mut accelerometer =
         ChrononautsAccelerometer::new(i2c_driver, chrononauts_event_loop.clone());
     let _accelerometer_handler = thread::spawn(move || accelerometer.run());
+
+    // ####################
+    // # Heartbeat Handler #
+    // ####################
+    let _button_subscription_handler = if let ChrononautsId::L = chrononauts_id {
+        let chrononauts_event_loop = chrononauts_event_loop.clone();
+        Some(thread::spawn(move || -> Result<(), ChrononautsError> {
+            let timer_service = EspTaskTimerService::new()?;
+            let mut timer = timer_service.timer_async()?;
+            block_on(pin!(async move {
+                loop {
+                    chrononauts_event_loop
+                        .post::<MainEvent>(&MainEvent::SendSyncRequest, delay::BLOCK)?;
+                    timer.after(Duration::from_secs(10)).await?;
+                    chrononauts_event_loop
+                        .post::<MainEvent>(&MainEvent::CheckSyncResponse, delay::BLOCK)?;
+                }
+            }))
+        }))
+    } else {
+        None
+    };
 
     // ###########################
     // # Main event loop handler #

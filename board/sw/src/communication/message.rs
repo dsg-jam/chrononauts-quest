@@ -38,7 +38,7 @@ pub enum MessagePayload {
     // This message is used to respond to a SyncRequest.
     // This message is ALWAYS sent by the board NOT connected to WiFi.
     // The payload is the game level (the same as from the request above).
-    SyncResponse(u8),
+    SyncResponse,
     // If the board not connected to WiFi (accidentally) restarts, it will send this message to the other board.
     // This message triggers the board connected to WiFi to send a SyncRequest.
     RecoveryRequest,
@@ -61,6 +61,10 @@ pub enum MessagePayload {
     ///
     /// It triggers to show the encryption key on the LEDs on the opposite board
     ShowEncryptionKey,
+    /// This message is ONLY sent form the board connected to WiFi to the backend.
+    ///
+    /// It contains the connection status of the other board
+    ConnectionStatus(backend_api::ConnectionStatus),
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
@@ -112,6 +116,7 @@ impl TryFrom<ChrononautsMessage> for BoardMessage {
         match chrononauts_msg.payload {
             MessagePayload::LabyrinthAction(action) => Ok(BoardMessage::LabyrinthAction(action)),
             MessagePayload::FrequencyTuned => Ok(BoardMessage::FrequencyTuned),
+            MessagePayload::ConnectionStatus(status) => Ok(BoardMessage::ConnectionStatus(status)),
             _ => Err(MessageError::InvalidBoardMessageFromBoard),
         }
     }

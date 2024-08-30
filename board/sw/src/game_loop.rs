@@ -18,6 +18,7 @@ pub struct GameLoop {
     button: DebounceButton,
     l2_my_led_speed: u16,
     l2_other_led_speed: Option<u16>,
+    hearbeat_received: bool,
 }
 
 impl GameLoop {
@@ -34,6 +35,7 @@ impl GameLoop {
             button,
             l2_my_led_speed: 0,
             l2_other_led_speed: None,
+            hearbeat_received: false,
         }
     }
 
@@ -90,6 +92,17 @@ impl GameLoop {
                         self.check_l2_winning_condition()?;
                     }
                 };
+            }
+            MessagePayload::SyncRequest(level) => {
+                let msg = ChrononautsMessage::new_from_board(MessagePayload::SyncResponse);
+                if level != self.game_level {
+                    self.game_level = level;
+                    self.handle_level_change()?;
+                }
+                self.send_to_board(msg)?;
+            }
+            MessagePayload::SyncResponse => {
+                self.hearbeat_received = true;
             }
             _ => {}
         }
@@ -220,6 +233,22 @@ impl GameLoop {
                     self.send_to_board(msg)?;
                 }
             }
+            MainEvent::SendSyncRequest if self.chrononauts_id.connected_to_backend() => {
+                let msg = ChrononautsMessage::new_from_board(MessagePayload::SyncRequest(
+                    self.game_level,
+                ));
+                self.send_to_board(msg)?;
+            }
+            MainEvent::CheckSyncResponse if self.chrononauts_id.connected_to_backend() => {
+                let msg = ChrononautsMessage::new_from_board(MessagePayload::ConnectionStatus(
+                    backend_api::ConnectionStatus {
+                        connected: self.hearbeat_received,
+                    },
+                ));
+                self.hearbeat_received = false;
+                self.send_to_backend(msg)?;
+            }
+            _ => {}
         }
         Ok(())
     }

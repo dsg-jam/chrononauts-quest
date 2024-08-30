@@ -31,6 +31,10 @@ pub enum MainEvent {
     AccelerometerDirectionChanged(Direction),
     /// This event is issued by the potentiometer handler when the value changes
     PotentiometerValueChanged(u16),
+    /// This event instructs the game loop to send a sync request
+    SendSyncRequest,
+    /// This event instructs the game loop to check for a sync response
+    CheckSyncResponse,
 }
 
 unsafe impl EspEventSource for MainEvent {

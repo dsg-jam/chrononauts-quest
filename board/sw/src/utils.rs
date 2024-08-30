@@ -19,6 +19,13 @@ impl ChrononautsId {
             ChrononautsId::L => ChrononautsId::T,
         }
     }
+
+    pub fn connected_to_backend(&self) -> bool {
+        match self {
+            ChrononautsId::T => false,
+            ChrononautsId::L => true,
+        }
+    }
 }
 
 impl From<ChrononautsId> for u8 {

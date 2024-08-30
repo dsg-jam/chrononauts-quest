@@ -1,21 +1,4 @@
 //! Chrononauts Reliable Transport Protocol.
-//!
-//! # Transportation
-//!
-//! This module contains the transportation layer for the Chrononauts board.
-//! It is responsible for sending and receiving RELIABLE (to some extend) messages between TWO boards.
-//! Please see the dedicated blog post [here](https://blog.chrononauts.quest/PATH-TO-BLOGPOST) for more information.
-//!
-//! ## Protocol
-//! The protocol is window-based and uses a sliding window to keep track of sent and received messages.
-//! The window size is fixed and can be configured in the `consts` module.
-//! Each received message is acknowledged by the receiver via cumulative acknowledgements.
-//! Because the medium inbetween sender and receive is unreliable, the sender will retransmit messages until they are acknowledged using a timeout mechanism.
-//! The timeout is fixed and can be configured in the `consts` module. See Figure 1 for an overview of the protocol.
-//!
-//! [Figure 1](https://blog.chrononauts.quest/PATH-TO-FIGURE)
-//! Figure 1: Overview of the Chrononauts Reliable Transport Protocol
-//!
 
 use std::{
     collections::VecDeque,
@@ -31,7 +14,7 @@ use esp_idf_svc::{
 };
 
 use crate::{
-    communication::{ChrononautsMessage, ChrononautsPacket},
+    communication::{ChrononautsMessage, ChrononautsPacket, MessagePayload},
     consts,
     event::{MainEvent, MessageTransmissionEvent, PacketReceptionEvent, PacketTransmissionEvent},
     utils::ChrononautsId,
@@ -195,7 +178,21 @@ impl Sender {
                 .unwrap();
 
             // Add the package to the window
-            self.window.push_back(packet);
+            if let Some(payload) = packet.get_payload() {
+                match payload.payload() {
+                    MessagePayload::SyncRequest(_) => {
+                        // Do not add connection status messages to the window, as they are not acknowledged
+                    }
+                    MessagePayload::SyncResponse => {
+                        // Do not add connection status messages to the window, as they are not acknowledged
+                    }
+                    _ => {
+                        self.window.push_back(packet);
+                    }
+                }
+            } else {
+                self.window.push_back(packet);
+            }
 
             // Reset the timeout
             self.timeout = Instant::now();
@@ -275,42 +272,6 @@ impl Receiver {
     ) -> Result<Option<ChrononautsMessage>, TransportError> {
         // Check if the packet is in order
         let received_sequence = packet.get_sequence();
-
-        /*
-        let window_start = self.next_expected_sequence;
-        let window_end = self.next_expected_sequence.wrapping_add(consts::WINDOW_SIZE as u8 - 1);
-        if window_start <= window_end {
-            if received_sequence < window_start || received_sequence > window_end {
-                return Err(TransportError::InvalidSequenceNumber);
-            }
-        } else {
-            if received_sequence < window_start && received_sequence > window_end {
-                return Err(TransportError::InvalidSequenceNumber);
-            }
-        }
-        */
-
-        // Insert the packet into the window at the correct position
-        // let position = (received_sequence.wrapping_sub(self.next_expected_sequence)) as usize;
-
-        // This should never happen and thus it SHALL panic
-        // assert!(position < consts::WINDOW_SIZE);
-
-        /*
-        // Check if packet is already in the window
-        if self.window.get(position).is_some() {
-            return Ok(());
-        }
-
-        if self.window.len() < consts::WINDOW_SIZE {
-            self.window.push_back(packet);
-        } else {
-            self.window.insert(position, packet);
-        }
-        */
-
-        // Increment the current sequence number
-        // self.next_expected_sequence = self.next_expected_sequence.wrapping_add(1);
 
         // Send ACK for the received packet
         let ack_packet = ChrononautsPacket::new_ack_from(&packet);
