@@ -2,10 +2,14 @@
 
 ## Flashing firmware
 
-- [Install Rust](https://rustup.rs)
-- [Setup ESP32 RISC-V target](https://esp-rs.github.io/book/installation/riscv.html)
-- Install espflash: `cargo install espflash`
-- Flash firmware: `cargo run --release`
+- Erase flash (to also void the NVS partition): `espflash erase-flash`
+- Flash firmware:
+    - WiFi-connected board: `CHRONONAUTS_ID=1 cargo run -- --no-skip`
+    - Other board: `CHRONONAUTS_ID=0 cargo run -- --no-skip`
+
+The Access Point credentials are (by default):
+- SSID: `Chrononauts-Board`
+- Password: `paradoxium2`
 
 ## Regenerating `style.css`
 
