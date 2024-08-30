@@ -40,54 +40,24 @@ type MsgEnterEncryptionKey = {
 };
 
 export class BackendConnection {
+  private abort: AbortSignal;
   private ws: WebSocket;
+  private autoReconnect: boolean = false;
   private updateListeners: Array<() => void>;
   private level: Level | null = null;
   private labyrinthState: MsgLabyrinthState | null = null;
   private pendingEncryptionKeyResponse: ((success: boolean) => void) | null =
     null;
 
-  constructor(ws: WebSocket) {
-    ws.binaryType = "arraybuffer";
+  constructor(ws: WebSocket, abort: AbortSignal) {
+    this.abort = abort;
     this.ws = ws;
     this.updateListeners = [];
+    this.attachWsListeners();
 
-    ws.addEventListener("open", (event) => {
-      console.info("open", event);
-    });
-    ws.addEventListener("close", (event) => {
-      console.info("close", event);
-    });
-    ws.addEventListener("message", (event) => {
-      let data = event.data as string | ArrayBuffer;
-      let msg;
-      try {
-        msg = safeJsonParse(data) as Msg;
-      } catch (err) {
-        console.error("error parsing message", { event, err });
-        return;
-      }
-
-      console.info("message", msg);
-      switch (msg["@type"]) {
-        case "GAME_STATE":
-          this.setLevel(msg.level);
-          if (this.pendingEncryptionKeyResponse && msg.level === "L4") {
-            this.pendingEncryptionKeyResponse(true);
-          }
-          break;
-        case "LABYRINTH_STATE":
-          this.setLabyrinth(msg);
-          break;
-        case "ENCRYPTION_KEY_REJECTED":
-          if (this.pendingEncryptionKeyResponse) {
-            this.pendingEncryptionKeyResponse(false);
-          }
-          break;
-      }
-    });
-    ws.addEventListener("error", (event) => {
-      console.error("error", event);
+    abort.addEventListener("abort", () => {
+      this.autoReconnect = false;
+      this.ws.close();
     });
   }
 
@@ -96,8 +66,10 @@ export class BackendConnection {
     login: LoginCredentials,
   ): Promise<BackendConnection> {
     abort.throwIfAborted();
-    const connection = new BackendConnection(createWebSocket(login));
-    await connection.waitForConnection(abort);
+    const connection = new BackendConnection(createWebSocket(login), abort);
+    await connection.waitForConnection();
+    // only enable auto-reconnect after the first connection is established
+    connection.autoReconnect = true;
     return connection;
   }
 
@@ -203,7 +175,7 @@ export class BackendConnection {
     };
   }
 
-  private async waitForConnection(abort: AbortSignal): Promise<void> {
+  private async waitForConnection(): Promise<void> {
     let unsubscribe = null as (() => void) | null;
     const promise = new Promise<void>((resolve, reject) => {
       const onUpdate = () => {
@@ -218,7 +190,7 @@ export class BackendConnection {
         reject(new Error("Connection error"));
       };
       const onAbort = () => {
-        reject(abort.reason);
+        reject(this.abort.reason);
       };
       const onTimeout = () => {
         reject(new Error("Connection timeout"));
@@ -227,14 +199,14 @@ export class BackendConnection {
       const unsubscribeUpdate = this.onUpdate(onUpdate);
       this.ws.addEventListener("close", onClose);
       this.ws.addEventListener("error", onError);
-      abort.addEventListener("abort", onAbort);
+      this.abort.addEventListener("abort", onAbort);
       const timeoutId = setTimeout(onTimeout, 10000);
 
       unsubscribe = () => {
         unsubscribeUpdate();
         this.ws.removeEventListener("close", onClose);
         this.ws.removeEventListener("error", onError);
-        abort.removeEventListener("abort", onAbort);
+        this.abort.removeEventListener("abort", onAbort);
         clearTimeout(timeoutId);
       };
     });
@@ -246,6 +218,58 @@ export class BackendConnection {
         unsubscribe();
       }
     }
+  }
+
+  private reconnect(): void {
+    if (!this.autoReconnect) {
+      return;
+    }
+
+    console.info("reconnecting");
+    const oldUrl = this.ws.url;
+    this.ws = new WebSocket(oldUrl);
+  }
+
+  private attachWsListeners(): void {
+    this.ws.binaryType = "arraybuffer";
+    this.ws.addEventListener("open", (event) => {
+      console.info("open", event);
+    });
+    this.ws.addEventListener("close", (event) => {
+      console.info("close", event);
+      this.reconnect();
+    });
+    this.ws.addEventListener("message", (event) => {
+      let data = event.data as string | ArrayBuffer;
+      let msg;
+      try {
+        msg = safeJsonParse(data) as Msg;
+      } catch (err) {
+        console.error("error parsing message", { event, err });
+        return;
+      }
+
+      console.info("message", msg);
+      switch (msg["@type"]) {
+        case "GAME_STATE":
+          this.setLevel(msg.level);
+          if (this.pendingEncryptionKeyResponse && msg.level === "L4") {
+            this.pendingEncryptionKeyResponse(true);
+          }
+          break;
+        case "LABYRINTH_STATE":
+          this.setLabyrinth(msg);
+          break;
+        case "ENCRYPTION_KEY_REJECTED":
+          if (this.pendingEncryptionKeyResponse) {
+            this.pendingEncryptionKeyResponse(false);
+          }
+          break;
+      }
+    });
+    this.ws.addEventListener("error", (event) => {
+      console.error("error", event);
+    });
   }
 }
 
