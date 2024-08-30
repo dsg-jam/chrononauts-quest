@@ -266,7 +266,6 @@ impl Game {
             return true;
         }
 
-        // TODO reject moves that go out of bounds or collide with a wall
         let pos = &mut player_state.position;
         let Some(new_pos) = self.labyrinth.map.try_move(pos.clone(), action.direction) else {
             return false;

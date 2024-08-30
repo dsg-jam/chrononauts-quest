@@ -151,6 +151,8 @@ impl LabyrinthMap {
     }
 }
 
+// NOTE: this layout has been copied into the frontend because I'm (simon) lazy.
+//       take care to keep them in sync.
 const SAMPLE_LABYRINTH: &str = r#"
 ########################################
 ####1  ##########################    ###
