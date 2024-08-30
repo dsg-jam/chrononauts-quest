@@ -2,7 +2,7 @@ use std::io::Write;
 use std::pin::pin;
 
 use backend_api::labyrinth::{Action, Direction};
-use backend_api::{BoardMessage, DeviceId};
+use backend_api::{BoardMessage, ConnectionStatus, DeviceId};
 use futures::{SinkExt, StreamExt};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::mpsc;
@@ -84,6 +84,22 @@ async fn main() -> anyhow::Result<()> {
                 "frequency_tuned" | "ft" => {
                     write.send(BoardMessage::FrequencyTuned).await.unwrap();
                 }
+                "board2_connected" | "b2c" => {
+                    write
+                        .send(BoardMessage::ConnectionStatus(ConnectionStatus {
+                            connected: true,
+                        }))
+                        .await
+                        .unwrap();
+                }
+                "board2_disconnected" | "b2d" => {
+                    write
+                        .send(BoardMessage::ConnectionStatus(ConnectionStatus {
+                            connected: false,
+                        }))
+                        .await
+                        .unwrap();
+                }
                 "set_device player1" => {
                     device = DeviceId::Player1;
                 }
@@ -145,6 +161,8 @@ fn print_prompt(show_help: bool) {
     if show_help {
         println!("Available commands:");
         println!("  frequency_tuned|ft");
+        println!("  board2_connected|b2c");
+        println!("  board2_disconnected|b2d");
         println!();
         println!("Labyrinth:");
         println!("  set_device <device>");
