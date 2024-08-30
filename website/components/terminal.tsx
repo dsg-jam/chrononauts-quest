@@ -105,7 +105,10 @@ export class Terminal {
   ): Promise<void> {
     let { startDelay, charDelay, lineEndDelay } = opts ?? {};
 
-    const lines = Array.isArray(text) ? text : [text];
+    const lines = (Array.isArray(text) ? text : [text])
+      .map((line) => line.split("\n"))
+      .flat();
+
     let firstLine = false;
     for (const line of lines) {
       await this.typeLine(line, {
@@ -137,7 +140,7 @@ export class Terminal {
     }
 
     if (!text) {
-      text = "\n";
+      text = " ";
     }
 
     const chars = text.split("");
@@ -150,9 +153,6 @@ export class Terminal {
       }
 
       switch (char) {
-        case "\n":
-          lineEl.innerHTML += "<br>&nbsp;";
-          break;
         case "\t":
           lineEl.innerHTML += "&nbsp;&nbsp;";
           break;
