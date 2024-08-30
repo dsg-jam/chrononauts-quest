@@ -43,6 +43,7 @@ export class BackendConnection {
   private ws: WebSocket;
   private updateListeners: Array<() => void>;
   private level: Level | null = null;
+  private labyrinthState: MsgLabyrinthState | null = null;
   private pendingEncryptionKeyResponse: ((success: boolean) => void) | null =
     null;
 
@@ -76,6 +77,7 @@ export class BackendConnection {
           }
           break;
         case "LABYRINTH_STATE":
+          this.setLabyrinth(msg);
           break;
         case "ENCRYPTION_KEY_REJECTED":
           if (this.pendingEncryptionKeyResponse) {
@@ -155,6 +157,32 @@ export class BackendConnection {
     this.dispatchUpdate();
   }
 
+  getLabyrinth(): MsgLabyrinthState {
+    return this.labyrinthState ?? defaultLabyrinthState;
+  }
+
+  private setLabyrinth(labyrinth: MsgLabyrinthState): void {
+    const playerEq = (a: MsgLabyrinthPlayer, b: MsgLabyrinthPlayer) => {
+      return (
+        a.position.x === b.position.x &&
+        a.position.y === b.position.y &&
+        a.direction === b.direction
+      );
+    };
+    const stateEq = (a: MsgLabyrinthState, b: MsgLabyrinthState) => {
+      return playerEq(a.player1, b.player1) && playerEq(a.player2, b.player2);
+    };
+
+    const changed =
+      this.labyrinthState === null || !stateEq(this.labyrinthState, labyrinth);
+    if (!changed) {
+      return;
+    }
+
+    this.labyrinthState = labyrinth;
+    this.dispatchUpdate();
+  }
+
   private dispatchUpdate(): void {
     for (const listener of this.updateListeners) {
       try {
@@ -227,3 +255,9 @@ function createWebSocket(login: LoginCredentials): WebSocket {
   url.searchParams.set("password", login.password);
   return new WebSocket(url);
 }
+
+// should never be seen but we don't want to crash if it's missing
+const defaultLabyrinthState: MsgLabyrinthState = {
+  player1: { position: { x: 0, y: 0 }, direction: "UP" },
+  player2: { position: { x: 0, y: 0 }, direction: "UP" },
+};
