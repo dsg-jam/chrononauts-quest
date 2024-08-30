@@ -247,7 +247,7 @@ fn run() -> Result<(), ChrononautsError> {
                 loop {
                     chrononauts_event_loop
                         .post::<MainEvent>(&MainEvent::SendSyncRequest, delay::BLOCK)?;
-                    timer.after(Duration::from_secs(10)).await?;
+                    timer.after(Duration::from_secs(30)).await?;
                     chrononauts_event_loop
                         .post::<MainEvent>(&MainEvent::CheckSyncResponse, delay::BLOCK)?;
                 }
