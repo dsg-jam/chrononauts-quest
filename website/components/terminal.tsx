@@ -175,6 +175,10 @@ export class Terminal {
     const inputEl = document.createElement("span");
     inputEl.id = styles.input;
     inputEl.contentEditable = "true";
+    inputEl.setAttribute("autocomplete", "false");
+    inputEl.setAttribute("autocorrect", "false");
+    inputEl.setAttribute("autocapitalize", "false");
+    inputEl.setAttribute("spellcheck", "false");
     if (hidden) {
       inputEl.classList.add(styles.password);
     }
@@ -182,8 +186,9 @@ export class Terminal {
     this.terminalEl.appendChild(inputEl);
     inputEl.focus();
 
+    let input;
     try {
-      return await inputReader({
+      input = await inputReader({
         el: inputEl,
         abort: this.abort,
         hidden: !!hidden,
@@ -192,6 +197,11 @@ export class Terminal {
     } finally {
       inputEl.contentEditable = "false";
     }
+
+    if (!hidden) {
+      this.addToHistory(input);
+    }
+    return input;
   }
 
   async prompt(text: string, hidden?: boolean): Promise<string> {
