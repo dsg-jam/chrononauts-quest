@@ -1,6 +1,6 @@
 import { safeJsonParse, safeJsonStringify } from "@/utils/json";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
 
 export type Level = "L0" | "L1" | "L2" | "L3" | "L4";
 
@@ -222,7 +222,7 @@ export class BackendConnection {
 }
 
 function createWebSocket(login: LoginCredentials): WebSocket {
-  const url = new URL(BACKEND_URL, window.location.href);
+  const url = new URL(backendUrl, window.location.href);
   url.searchParams.set("username", login.username);
   url.searchParams.set("password", login.password);
   return new WebSocket(url);
