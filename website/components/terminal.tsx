@@ -141,6 +141,8 @@ export class Terminal {
     lineEl.classList.add(styles.active);
     this.terminalEl.appendChild(lineEl);
 
+    this.scrollToBottom();
+
     if (startDelay) {
       await sleep(startDelay, this.abort);
     }
