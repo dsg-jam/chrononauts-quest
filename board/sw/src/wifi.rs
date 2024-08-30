@@ -30,6 +30,7 @@ pub struct ChrononautsWifi<'a> {
     wifi: EspWifi<'a>,
     runner_rx: Receiver<WifiRunner>,
     ssids: ChrononautsSSIDs,
+    reconnect_ttl: u8,
 }
 
 impl<'a> ChrononautsWifi<'a> {
@@ -58,6 +59,7 @@ impl<'a> ChrononautsWifi<'a> {
             wifi,
             runner_rx,
             ssids,
+            reconnect_ttl: 5,
         })
     }
 
@@ -122,12 +124,19 @@ impl<'a> ChrononautsWifi<'a> {
             match event {
                 WifiRunner::ChangeWifi(creds) => {
                     log::info!("Changing Wi-Fi to {:?}", creds);
+                    self.reconnect_ttl = 5;
                     self.change_wifi(creds)?;
                 }
                 WifiRunner::GetWifi => {
                     self.scan_for_available_ssids()?;
                 }
                 WifiRunner::ReconnectWifi => {
+                    if self.reconnect_ttl == 0 {
+                        log::info!("Reconnect TTL reached, disconnecting");
+                        self.wifi.disconnect()?;
+                        continue;
+                    }
+                    self.reconnect_ttl -= 1;
                     self.wifi.connect()?;
                 }
                 WifiRunner::ScanFinished => {

@@ -42,6 +42,9 @@ impl GameLoop {
             &GameLoopEvent::GameLevelChanged(self.game_level),
             delay::BLOCK,
         )?;
+        if let Level::L4 = self.game_level {
+            self.handle_accelerometer_direction(self.labyrinth_dir)?;
+        }
         Ok(())
     }
 
@@ -81,6 +84,13 @@ impl GameLoop {
                 ));
                 self.send_to_board(msg)?;
             }
+            MessagePayload::FrequencyTuned => {
+                if let Level::L2 = self.game_level {
+                    if let ChrononautsId::L = self.chrononauts_id {
+                        self.check_l2_winning_condition()?;
+                    }
+                };
+            }
             _ => {}
         }
         Ok(())
@@ -101,7 +111,7 @@ impl GameLoop {
     fn send_message(&mut self, msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
         if let ChrononautsId::L = self.chrononauts_id {
             self.chrononauts_event_loop
-                .post::<WsTransmissionEvent>(&WsTransmissionEvent::Send(msg), delay::BLOCK)?;
+                .post::<WsTransmissionEvent>(&WsTransmissionEvent::Send(msg, 5), delay::BLOCK)?;
         } else {
             self.chrononauts_event_loop
                 .post::<MessageTransmissionEvent>(
@@ -116,17 +126,24 @@ impl GameLoop {
         self.l2_my_led_speed == self.l2_other_led_speed.unwrap_or_default()
     }
 
+    fn check_l2_winning_condition(&mut self) -> Result<(), ChrononautsError> {
+        if self.l2_speeds_match() {
+            let msg = ChrononautsMessage::new_from_board(MessagePayload::FrequencyTuned);
+            self.send_to_backend(msg)?;
+        } else {
+            log::info!("Speeds do not match");
+        }
+        Ok(())
+    }
+
     fn handle_button_press(&mut self) -> Result<(), ChrononautsError> {
         match self.game_level {
             Level::L2 => {
                 if let ChrononautsId::L = self.chrononauts_id {
-                    if self.l2_speeds_match() {
-                        let msg =
-                            ChrononautsMessage::new_from_board(MessagePayload::FrequencyTuned);
-                        self.send_to_backend(msg)?;
-                    } else {
-                        log::info!("Speeds do not match");
-                    }
+                    self.check_l2_winning_condition()?;
+                } else {
+                    let msg = ChrononautsMessage::new_from_board(MessagePayload::FrequencyTuned);
+                    self.send_to_board(msg)?;
                 }
             }
             Level::L3 => {
@@ -228,15 +245,13 @@ impl GameLoop {
 }
 
 fn poti_to_led_speed(value: u16) -> u16 {
-    let val = match value {
+    match value {
         0..600 => 4000,
         600..1300 => 2000,
         1300..2000 => 1000,
         2000..2700 => 500,
         2700.. => 250,
-    };
-    log::info!("Poti value: {}", val);
-    val
+    }
 }
 
 trait BoardTransmitter {
@@ -258,7 +273,7 @@ impl BoardTransmitter for GameLoop {
 impl BackendTransmitter for GameLoop {
     fn send_to_backend(&self, msg: ChrononautsMessage) -> Result<(), ChrononautsError> {
         self.chrononauts_event_loop
-            .post::<WsTransmissionEvent>(&WsTransmissionEvent::Send(msg), delay::BLOCK)?;
+            .post::<WsTransmissionEvent>(&WsTransmissionEvent::Send(msg, 5), delay::BLOCK)?;
         Ok(())
     }
 }

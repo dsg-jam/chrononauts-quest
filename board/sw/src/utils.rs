@@ -64,9 +64,9 @@ pub struct DebounceButton {
 impl DebounceButton {
     pub fn new() -> Self {
         Self {
-            previous_level: false,
-            button_state: false,
-            last_change_time: Duration::from_secs(0),
+            previous_level: true,
+            button_state: true,
+            last_change_time: Duration::default(),
         }
     }
 

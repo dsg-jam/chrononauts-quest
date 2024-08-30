@@ -12,7 +12,7 @@ use crate::{communication::ChrononautsMessage, consts};
 #[allow(dead_code)]
 #[derive(Clone, Debug, Copy)]
 pub enum WsTransmissionEvent {
-    Send(ChrononautsMessage),
+    Send(ChrononautsMessage, u8),
     Connect,
 }
 

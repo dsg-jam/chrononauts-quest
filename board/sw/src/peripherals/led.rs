@@ -135,29 +135,32 @@ where
 
     async fn l3(&mut self) -> Result<(), LedError> {
         let mut additional_pause = false;
-        for c in consts::L3_ENCODED_KEY.chars() {
-            if self.led_number == 1 {
-                if additional_pause {
-                    self.show_inter_component_pause().await?;
-                    additional_pause = false;
-                }
+        if self.led_number == 1 {
+            for c in consts::L3_ENCODED_KEY.chars() {
                 match c {
                     '.' => {
+                        if additional_pause {
+                            self.show_inter_component_pause().await?;
+                        }
                         self.show_dot().await?;
                         additional_pause = true;
                     }
                     '-' => {
+                        if additional_pause {
+                            self.show_inter_component_pause().await?;
+                        }
                         self.show_dash().await?;
                         additional_pause = true;
                     }
                     _ => {
                         self.show_inter_letter_pause().await?;
+                        additional_pause = false;
                     }
                 }
-            } else {
-                for _ in 0..morse_length() {
-                    self.show_time_pulse().await?;
-                }
+            }
+        } else {
+            for _ in 0..morse_length() {
+                self.show_time_pulse().await?;
             }
         }
         self.set_low()?;
@@ -232,21 +235,26 @@ where
 
 fn morse_length() -> usize {
     let mut additional_pause = false;
-    consts::L3_ENCODED_KEY.chars().fold(0, |mut acc, x| {
-        if additional_pause {
-            acc += 1;
-            additional_pause = false;
-        }
-        match x {
+    consts::L3_ENCODED_KEY
+        .chars()
+        .fold(0, |mut acc, x| match x {
             '.' => {
+                if additional_pause {
+                    acc += 1;
+                }
                 additional_pause = true;
                 acc + 1
             }
             '-' => {
+                if additional_pause {
+                    acc += 1;
+                }
                 additional_pause = true;
                 acc + 3
             }
-            _ => acc + 3,
-        }
-    })
+            _ => {
+                additional_pause = false;
+                acc + 3
+            }
+        })
 }

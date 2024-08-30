@@ -4,7 +4,7 @@
 //!
 
 use core::time::Duration;
-use std::pin::pin;
+use std::{pin::pin, thread::sleep};
 
 use backend_api::BoardMessage;
 use esp_idf_svc::{
@@ -51,7 +51,11 @@ impl ChrononautsWebSocketClient {
     }
 
     fn connect(&mut self) -> Result<(), WsError> {
-        let config = EspWebSocketClientConfig::default();
+        let config = EspWebSocketClientConfig {
+            reconnect_timeout_ms: Duration::from_secs(5),
+            network_timeout_ms: Duration::from_secs(5),
+            ..Default::default()
+        };
         let timeout = Duration::from_secs(5);
         let uri = format!(
             "{}?password={}",
@@ -92,12 +96,25 @@ impl ChrononautsWebSocketClient {
                 let event = subscription.recv().await?;
 
                 match event {
-                    WsTransmissionEvent::Send(msg) => {
+                    WsTransmissionEvent::Send(msg, ttl) => {
                         let Ok(board_msg) = BoardMessage::try_from(msg) else {
                             log::error!("[{CNT_WS_PREFIX}] Failed to convert ChrononautsMessage to BoardMessage.");
                             continue;
                         };
-                        self.send_message(&serde_json::to_vec(&board_msg).unwrap())?;
+                        if self
+                            .send_message(&serde_json::to_vec(&board_msg).unwrap())
+                            .is_err()
+                        {
+                            log::error!("[{CNT_WS_PREFIX}] Failed to send message.");
+                            // Try again later
+                            if ttl > 0 {
+                                sleep(Duration::from_secs(3));
+                                self.event_loop.post::<WsTransmissionEvent>(
+                                    &WsTransmissionEvent::Send(msg, ttl - 1),
+                                    delay::BLOCK,
+                                )?;
+                            }
+                        }
                     }
                     WsTransmissionEvent::Connect => {
                         self.connect()?;
