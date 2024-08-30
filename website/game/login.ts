@@ -1,6 +1,7 @@
 import { BackendConnection, LoginCredentials } from "./backend";
 import { Terminal } from "@/components/terminal";
 import { safeJsonParse, safeJsonStringify } from "@/utils/json";
+import { skipBootAnimation } from "./game";
 
 export async function boot(terminal: Terminal): Promise<void> {
   terminal.clear();
@@ -44,7 +45,9 @@ async function getCredentials(
   if (loadFromStorage) {
     const raw = localStorage.getItem("login");
     if (raw) {
-      await terminal.type("Loading cached credentials...\n");
+      if (!skipBootAnimation) {
+        await terminal.type("Loading cached credentials...\n");
+      }
       return safeJsonParse(raw) as LoginCredentials;
     }
   }

@@ -4,7 +4,7 @@ import { Vfs } from "./vfs";
 import { Terminal } from "@/components/terminal";
 
 // Set to true in `.env.local` to skip the boot animation and login process during development.
-const skipBootAnimation =
+export const skipBootAnimation =
   process.env.NEXT_PUBLIC_SKIP_BOOT_ANIMATION === "true";
 
 export async function run(terminal: Terminal) {
