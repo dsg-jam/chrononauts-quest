@@ -11,7 +11,7 @@ export default {
     }
     const content = await vfs.read(path);
     if (content) {
-      await terminal.type(content);
+      await terminal.type(content, { lineEndDelay: 200 });
     } else {
       await terminal.type(`No such file: ${path}`);
     }
