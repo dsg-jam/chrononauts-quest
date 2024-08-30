@@ -1,0 +1,44 @@
+.labyrinth {
+  position: relative;
+  height: 60%;
+  width: 100%;
+}
+
+.positioned {
+  position: absolute;
+  /* input variables: x and y position and width and height */
+  left: calc(var(--x) * 100% / var(--width));
+  top: calc(var(--y) * 2ch);
+}
+
+.wall::before {
+  content: "#";
+}
+
+.player.p1 {
+  color: var(--red-color);
+}
+
+.player.p2 {
+  color: var(--blue-color);
+}
+
+.player::before {
+  font-weight: 900;
+}
+
+.player.up::before {
+  content: "⮝";
+}
+
+.player.down::before {
+  content: "⮟";
+}
+
+.player.left::before {
+  content: "⮜";
+}
+
+.player.right::before {
+  content: "⮞";
+}

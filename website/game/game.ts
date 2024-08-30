@@ -7,6 +7,8 @@ import { Terminal } from "@/components/terminal";
 export const skipBootAnimation =
   process.env.NEXT_PUBLIC_SKIP_BOOT_ANIMATION === "true";
 
+const repoUrl = process.env.NEXT_PUBLIC_REPO_URL ?? "";
+
 export async function run(terminal: Terminal) {
   if (!skipBootAnimation) {
     await boot(terminal);
@@ -43,4 +45,26 @@ export async function run(terminal: Terminal) {
     }
     await command.execute({ terminal, backend, vfs, args });
   }
+}
+
+export async function showGameComplete(terminal: Terminal) {
+  await terminal.type([
+    "Congratulations, you completed the game",
+    "",
+    "",
+    "-- Credits --",
+    "",
+    "Kevin:",
+    "\tChrononauts board (hardware and firmware)",
+    "",
+    "Simon:",
+    "\tWebsite and backend",
+    "",
+    "Thank you for playing!",
+    "",
+    "",
+    "You can find the source code at:",
+    "",
+    repoUrl,
+  ]);
 }

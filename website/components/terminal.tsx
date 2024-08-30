@@ -84,6 +84,12 @@ export class Terminal {
     this.terminalEl.innerHTML = "";
   }
 
+  addSubElement(): HTMLElement {
+    const subEl = document.createElement("div");
+    this.terminalEl.appendChild(subEl);
+    return subEl;
+  }
+
   scrollToBottom(): void {
     this.terminalEl.scrollTop = this.terminalEl.scrollHeight;
   }

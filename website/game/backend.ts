@@ -2,7 +2,7 @@ import { safeJsonParse, safeJsonStringify } from "@/utils/json";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
 
-export type Level = "L0" | "L1" | "L2" | "L3" | "L4";
+export type Level = "L0" | "L1" | "L2" | "L3" | "L4" | "FINISH";
 
 export interface GameState {
   level: Level;
@@ -30,7 +30,7 @@ type MsgLabyrinthState = {
   player2: MsgLabyrinthPlayer;
 };
 
-type MsgLabyrinthPlayer = {
+export type MsgLabyrinthPlayer = {
   position: { x: number; y: number };
   direction: "UP" | "DOWN" | "LEFT" | "RIGHT";
 };
@@ -153,6 +153,24 @@ export class BackendConnection {
 
     this.labyrinthState = labyrinth;
     this.dispatchUpdate();
+  }
+
+  async waitForUpdate(): Promise<void> {
+    let unsubscribe = null as (() => void) | null;
+    const promise = new Promise<void>((resolve) => {
+      const onUpdate = () => {
+        resolve();
+      };
+      unsubscribe = this.onUpdate(onUpdate);
+    });
+
+    try {
+      return await promise;
+    } finally {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    }
   }
 
   private dispatchUpdate(): void {
