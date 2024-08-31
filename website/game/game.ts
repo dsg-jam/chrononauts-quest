@@ -3,8 +3,11 @@ import { boot, login } from "./login";
 import { Vfs } from "./vfs";
 import { Terminal } from "@/components/terminal";
 
-// Set to true to skip the boot animation and login process during development.
-const skipBootAnimation = false;
+// Set to true in `.env.local` to skip the boot animation and login process during development.
+export const skipBootAnimation =
+  process.env.NEXT_PUBLIC_SKIP_BOOT_ANIMATION === "true";
+
+const repoUrl = process.env.NEXT_PUBLIC_REPO_URL ?? "";
 
 export async function run(terminal: Terminal) {
   if (!skipBootAnimation) {
@@ -42,4 +45,26 @@ export async function run(terminal: Terminal) {
     }
     await command.execute({ terminal, backend, vfs, args });
   }
+}
+
+export async function showGameComplete(terminal: Terminal) {
+  await terminal.type([
+    "Congratulations, you completed the game",
+    "",
+    "",
+    "-- Credits --",
+    "",
+    "Kevin:",
+    "\tChrononauts board (hardware and firmware)",
+    "",
+    "Simon:",
+    "\tWebsite and backend",
+    "",
+    "Thank you for playing!",
+    "",
+    "",
+    "You can find the source code at:",
+    "",
+    repoUrl,
+  ]);
 }

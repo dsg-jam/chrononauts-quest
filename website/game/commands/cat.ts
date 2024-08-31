@@ -2,7 +2,7 @@ import { Command } from ".";
 
 export default {
   name: "cat",
-  description: "Display the contents of a file",
+  description: "Exhibit the contents of a particular file.",
   async execute({ terminal, vfs, args }): Promise<void> {
     const path = args[0];
     if (!path) {
@@ -11,7 +11,7 @@ export default {
     }
     const content = await vfs.read(path);
     if (content) {
-      await terminal.type(content);
+      await terminal.type(content, { lineEndDelay: 200 });
     } else {
       await terminal.type(`No such file: ${path}`);
     }

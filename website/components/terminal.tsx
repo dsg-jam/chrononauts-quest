@@ -84,6 +84,12 @@ export class Terminal {
     this.terminalEl.innerHTML = "";
   }
 
+  addSubElement(): HTMLElement {
+    const subEl = document.createElement("div");
+    this.terminalEl.appendChild(subEl);
+    return subEl;
+  }
+
   scrollToBottom(): void {
     this.terminalEl.scrollTop = this.terminalEl.scrollHeight;
   }
@@ -105,7 +111,10 @@ export class Terminal {
   ): Promise<void> {
     let { startDelay, charDelay, lineEndDelay } = opts ?? {};
 
-    const lines = Array.isArray(text) ? text : [text];
+    const lines = (Array.isArray(text) ? text : [text])
+      .map((line) => line.split("\n"))
+      .flat();
+
     let firstLine = false;
     for (const line of lines) {
       await this.typeLine(line, {
@@ -132,12 +141,14 @@ export class Terminal {
     lineEl.classList.add(styles.active);
     this.terminalEl.appendChild(lineEl);
 
+    this.scrollToBottom();
+
     if (startDelay) {
       await sleep(startDelay, this.abort);
     }
 
     if (!text) {
-      text = "\n";
+      text = " ";
     }
 
     const chars = text.split("");
@@ -150,9 +161,6 @@ export class Terminal {
       }
 
       switch (char) {
-        case "\n":
-          lineEl.innerHTML += "<br>&nbsp;";
-          break;
         case "\t":
           lineEl.innerHTML += "&nbsp;&nbsp;";
           break;
@@ -175,6 +183,10 @@ export class Terminal {
     const inputEl = document.createElement("span");
     inputEl.id = styles.input;
     inputEl.contentEditable = "true";
+    inputEl.setAttribute("autocomplete", "false");
+    inputEl.setAttribute("autocorrect", "false");
+    inputEl.setAttribute("autocapitalize", "false");
+    inputEl.setAttribute("spellcheck", "false");
     if (hidden) {
       inputEl.classList.add(styles.password);
     }
@@ -182,8 +194,9 @@ export class Terminal {
     this.terminalEl.appendChild(inputEl);
     inputEl.focus();
 
+    let input;
     try {
-      return await inputReader({
+      input = await inputReader({
         el: inputEl,
         abort: this.abort,
         hidden: !!hidden,
@@ -192,6 +205,11 @@ export class Terminal {
     } finally {
       inputEl.contentEditable = "false";
     }
+
+    if (!hidden) {
+      this.addToHistory(input);
+    }
+    return input;
   }
 
   async prompt(text: string, hidden?: boolean): Promise<string> {
